@@ -15,15 +15,16 @@ export async function registerNotificationToken(currentUser) {
     return { ok: false, reason: 'unsupported-or-admin' };
   }
 
-  const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
-  if (!vapidKey) {
-    console.warn('VITE_FIREBASE_VAPID_KEY belum diisi. Push notification belum aktif.');
-    return { ok: false, reason: 'missing-vapid-key' };
-  }
-
+  // Minta izin lebih awal agar fallback lokal tetap bisa jalan
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') {
     return { ok: false, reason: 'permission-denied' };
+  }
+
+  const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+  if (!vapidKey) {
+    console.warn('VITE_FIREBASE_VAPID_KEY belum diisi. FCM diabaikan, menggunakan fallback lokal.');
+    return { ok: true, reason: 'missing-vapid-key-using-local-fallback' };
   }
 
   const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
