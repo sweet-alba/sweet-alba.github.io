@@ -18,11 +18,10 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
+          node-version: 22
 
       - name: Install dependencies
-        run: npm install --include=dev
+        run: npm install --no-package-lock --include=dev
 
       - name: Build
         run: npx vite build
