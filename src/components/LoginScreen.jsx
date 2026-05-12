@@ -4,18 +4,26 @@ import { motion } from 'framer-motion';
 import { Button, Card, Input } from './ui';
 import { USERS } from '../constants';
 
-export default function LoginScreen({ onLogin }) {
+export default function LoginScreen({ onLogin, dbUsers = [] }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const user = USERS.find(u => u.username === username && u.password === password);
+
+    // 1. Look in Firestore Users first
+    let user = dbUsers.find(u => u.username === username && u.password === password);
+
+    // 2. Fallback to hardcoded USERS if not found in DB (Safety Net)
+    if (!user) {
+      user = USERS.find(u => u.username === username && u.password === password);
+    }
+
     if (user) {
       onLogin(user);
     } else {
-      setError('Username atau password salah! (Hint: pass adalah "123")');
+      setError('Nomor HP atau password salah!');
     }
   };
 
@@ -54,10 +62,16 @@ export default function LoginScreen({ onLogin }) {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <Input
-              label="Username"
-              placeholder="Masukkan username anda..."
+              label="Nomor Handphone"
+              placeholder="Masukkan nomor HP"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value.toLowerCase();
+                // Hanya izinkan angka ATAU partial/full string 'admin'
+                if (val === '' || /^\d+$/.test(val) || 'admin'.startsWith(val)) {
+                  setUsername(val);
+                }
+              }}
               autoFocus
             />
             <Input
@@ -78,16 +92,16 @@ export default function LoginScreen({ onLogin }) {
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                 <p className="text-[10px] text-slate-400 font-bold">ADMIN</p>
-                <p className="text-xs font-mono text-slate-600">admin / 123</p>
+                <p className="text-[10px] font-mono text-slate-600">admin / 123</p>
               </div>
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                 <p className="text-[10px] text-slate-400 font-bold">STAFF</p>
-                <p className="text-xs font-mono text-slate-600">satpam1 / 123</p>
+                <p className="text-[10px] font-mono text-slate-600">081234567890 / 123</p>
               </div>
             </div>
           </div>
         </Card>
-        
+
         <p className="text-center text-slate-400 text-sm mt-8">
           &copy; 2024 Sweet Alba Management. All rights reserved.
         </p>
