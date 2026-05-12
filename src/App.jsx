@@ -130,6 +130,11 @@ export default function App() {
 
     setCurrentUser(user);
     sessionStorage.setItem('absensi_user', JSON.stringify(user));
+    
+    // Minta izin notifikasi tepat saat klik LOGIN (User Gesture)
+    if (user.role !== 'admin') {
+      registerNotificationToken(user).catch(err => console.warn("Permission denied or skipped:", err));
+    }
   };
 
   useEffect(() => {
