@@ -121,12 +121,8 @@ export default function App() {
     return () => unsubscribe();
   }, [firebaseUser]);
 
-  const handleLogin = async ({ username, password }) => {
-    const user = users.find(u => u.username === username && u.password === password);
-
-    if (!user) {
-      throw new Error('Nomor HP atau password salah!');
-    }
+  const handleLogin = async (user) => {
+    if (!user) return;
 
     setCurrentUser(user);
     sessionStorage.setItem('absensi_user', JSON.stringify(user));
