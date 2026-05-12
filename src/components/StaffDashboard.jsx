@@ -1,4 +1,4 @@
-import { useState, useMemo, useSyncExternalStore } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Clock, Calendar, Check, CheckCircle, ChevronLeft, ChevronRight, X, AlertTriangle, AlertCircle, Timer, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
@@ -57,15 +57,29 @@ export default function StaffDashboard({ currentUser, onLogout, theme, onThemeTo
   const overdueRecord = myRecords.find(r => r.date !== todayStr && !r.checkOut);
   const alreadyCompletedToday = myRecords.find(r => r.date === todayStr && r.checkOut);
   const activeCheckInDate = getRecordDate(activeRecord);
-  const durationTick = useSyncExternalStore(
-    (callback) => {
-      if (!activeRecord) return () => {};
-      const timer = window.setInterval(callback, 1000);
-      return () => window.clearInterval(timer);
-    },
-    () => Date.now(),
-    () => Date.now()
-  );
+  const [durationTick, setDurationTick] = useState(Date.now());
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    if (!activeRecord) {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      return;
+    }
+
+    timerRef.current = setInterval(() => {
+      setDurationTick(Date.now());
+    }, 1000);
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [activeRecord?.id]);
   const activeDurationLabel = activeCheckInDate
     ? formatDuration(durationTick - activeCheckInDate.getTime())
     : 'Menghitung...';
