@@ -592,51 +592,193 @@ function AnnouncementSection({ announcement, onUpdateAnnouncement }) {
 
 function TrendsSection({ attendances, summaryData, setFilterType, filterType, setCurrentPage, users, onUserAction }) {
   const [isSimulating, setIsSimulating] = useState(false);
-              {chartData.map((day, i) => {
-                const maxCount = Math.max(...chartData.map(d => d.count), 1);
-                const heightPercentage = (day.count / maxCount) * 100;
+
+  // Calculate chart data (last 7 days)
+  const chartData = useMemo(() => {
+    return Array.from({ length: 7 }).map((_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toLocaleDateString('id-ID');
+      const count = attendances.filter(a => a.date === dateStr).length;
+      return {
+        name: d.toLocaleDateString('id-ID', { weekday: 'short' }),
+        count,
+        fullDate: dateStr
+      };
+    }).reverse();
+  }, [attendances]);
+
+  const handleGenerateDummy = async () => {
+    setIsSimulating(true);
+    const APP_ID = 'sweet-alba-absensi';
+    
+    try {
+      const staffUsers = users.filter(u => u.role !== 'admin');
+      if (staffUsers.length === 0) {
+        alert("Tidak ada user petugas untuk simulasi data.");
+        setIsSimulating(false);
+        return;
+      }
+
+      for (let i = 0; i < 7; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toLocaleDateString('id-ID');
+        
+        const dailyCount = Math.floor(Math.random() * 3) + 2; 
+        const randomUsers = [...staffUsers].sort(() => 0.5 - Math.random()).slice(0, dailyCount);
+
+        for (const user of randomUsers) {
+          const recordId = `dummy-${dateStr}-${user.id}`;
+          const checkInDate = new Date(d);
+          checkInDate.setHours(7, Math.floor(Math.random() * 30), 0); 
+
+          await setDoc(doc(db, 'apps', APP_ID, 'attendances', recordId), {
+            userId: user.id,
+            userName: user.name,
+            role: user.role,
+            date: dateStr,
+            shift: 'SECURITY_1 (Pagi 07:00 - 15:00)',
+            checkIn: checkInDate,
+            checkOut: new Date(checkInDate.getTime() + 8 * 60 * 60 * 1000), 
+            latenessMins: 0,
+            locationIn: { lat: -6.2, lng: 106.8 }
+          }, { merge: true });
+        }
+      }
+      alert("Simulasi data berhasil! Grafik akan segera terupdate.");
+    } catch (err) {
+      console.error(err);
+      alert("Gagal simulasi data: " + err.message);
+    }
+    setIsSimulating(false);
+  };
+
+  const handleSeedCleaner = async () => {
+    setIsSimulating(true);
+    const APP_ID = 'sweet-alba-absensi';
+    const cleanerUsers = users.filter(u => u.role === 'cleaner');
+    
+    if (cleanerUsers.length === 0) {
+      alert("Tidak ada user Cleaner untuk disemai.");
+      setIsSimulating(false);
+      return;
+    }
+
+    try {
+      for (let i = 0; i < 90; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toLocaleDateString('id-ID');
+        
+        for (const user of cleanerUsers) {
+          const recordId = `seed-${dateStr}-${user.id}`;
+          const checkInDate = new Date(d);
+          checkInDate.setHours(8, 0, 0); 
+
+          await setDoc(doc(db, 'apps', APP_ID, 'attendances', recordId), {
+            userId: user.id,
+            userName: user.name,
+            role: user.role,
+            date: dateStr,
+            shift: 'CLEANING_MORNING (Pagi)',
+            checkIn: checkInDate,
+            checkOut: new Date(checkInDate.getTime() + 7 * 60 * 60 * 1000), 
+            latenessMins: 0,
+            locationIn: { lat: -6.2, lng: 106.8 }
+          }, { merge: true });
+        }
+      }
+      alert("Seed data cleaner berhasil!");
+    } catch (err) {
+      console.error(err);
+      alert("Gagal seed data: " + err.message);
+    }
+    setIsSimulating(false);
+  };
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-8"
+    >
+      <Card className="p-8 border-none bg-white shadow-xl">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-8">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 shadow-inner">
+              <TrendingUp size={24} />
+            </div>
+            <div>
+              <h3 className="font-black text-slate-900 tracking-tight text-xl">Tren Kehadiran</h3>
+              <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Performa 7 hari terakhir</p>
+            </div>
+          </div>
+          
+          <div className="flex flex-wrap gap-3">
+            <Button 
+              variant="secondary" 
+              className="h-12 rounded-2xl px-6 font-black text-[10px] uppercase tracking-widest shadow-sm"
+              onClick={handleGenerateDummy}
+              disabled={isSimulating}
+            >
+              {isSimulating ? 'Memproses...' : 'Simulasi 7 Hari'}
+            </Button>
+            <Button 
+              variant="secondary" 
+              className="h-12 rounded-2xl px-6 font-black text-[10px] uppercase tracking-widest shadow-sm"
+              onClick={handleSeedCleaner}
+              disabled={isSimulating}
+            >
+              {isSimulating ? 'Memproses...' : 'Seed Data Cleaner'}
+            </Button>
+          </div>
+        </div>
+        
+        <div className="flex items-end justify-between h-72 gap-3 pt-10 px-2 border-b border-slate-50 pb-6">
+          {chartData.map((day, i) => {
+            const maxCount = Math.max(...chartData.map(d => d.count), 1);
+            const heightPercentage = (day.count / maxCount) * 100;
+            
+            return (
+              <div key={day.fullDate} className="flex-1 flex flex-col items-center group relative h-full justify-end">
+                <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] py-1.5 px-3 rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap z-20 shadow-2xl pointer-events-none mb-2 transform group-hover:-translate-y-1 font-black">
+                  {day.count} Orang
+                </div>
                 
-                return (
-                  <div key={day.fullDate} className="flex-1 flex flex-col items-center group relative h-full justify-end">
-                    {/* Tooltip */}
-                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] py-1.5 px-3 rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap z-20 shadow-2xl pointer-events-none mb-2 transform group-hover:-translate-y-1 font-black">
-                      {day.count} Orang
-                    </div>
-                    
-                    {/* Bar Container */}
-                    <div className="w-full flex flex-col items-center justify-end h-full group">
-                      {day.count > 0 ? (
-                        <motion.div 
-                          initial={{ height: 0 }}
-                          animate={{ height: `${heightPercentage}%` }}
-                          transition={{ delay: i * 0.1, duration: 0.8, ease: "easeOut" }}
-                          className="w-4 sm:w-8 bg-brand-500 rounded-t-lg relative group-hover:bg-brand-400 transition-colors shadow-lg shadow-brand-500/20"
-                        />
-                      ) : (
-                        <div className="w-4 sm:w-8 h-1.5 bg-slate-100 rounded-full mb-0" />
-                      )}
-                    </div>
-                    
-                    {/* Label */}
-                    <p className="text-[10px] font-black text-slate-400 mt-4 uppercase tracking-tighter group-hover:text-slate-900 transition-colors">{day.name}</p>
-                  </div>
-                );
-              })}
-           </div>
-           
-           <div className="mt-8 flex items-center justify-center space-x-6">
-              <div className="flex items-center space-x-2">
-                 <div className="w-3 h-3 rounded-full bg-brand-500"></div>
-                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tercatat</span>
+                <div className="w-full flex flex-col items-center justify-end h-full">
+                  {day.count > 0 ? (
+                    <motion.div 
+                      initial={{ height: 0 }}
+                      animate={{ height: `${heightPercentage}%` }}
+                      transition={{ delay: i * 0.1, duration: 0.8, ease: "easeOut" }}
+                      className="w-full max-w-[40px] bg-brand-500 rounded-t-2xl relative group-hover:bg-brand-400 transition-colors shadow-lg shadow-brand-500/20"
+                    />
+                  ) : (
+                    <div className="w-full max-w-[40px] h-2 bg-slate-100 rounded-full" />
+                  )}
+                </div>
+                
+                <p className="text-[10px] font-black text-slate-400 mt-4 uppercase tracking-widest group-hover:text-slate-900 transition-colors">
+                  {day.name}
+                </p>
               </div>
-              <div className="flex items-center space-x-2">
-                 <div className="w-3 h-3 rounded-full bg-slate-200"></div>
-                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Kosong</span>
-              </div>
-           </div>
-        </Card>
-      </div>
-    </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-8 flex items-center justify-center space-x-8">
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 rounded-full bg-brand-500 shadow-sm shadow-brand-500/50"></div>
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tercatat</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 rounded-full bg-slate-100"></div>
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Kosong</span>
+          </div>
+        </div>
+      </Card>
+    </motion.div>
   );
 }
 
