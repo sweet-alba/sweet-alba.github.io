@@ -75,7 +75,7 @@ export default function Navbar({ currentUser, onLogout, theme, onThemeToggle }) 
       <motion.nav
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="text-slate-950 h-20 sm:h-24 px-2 flex items-center justify-between w-full max-w-4xl pointer-events-auto dark:text-white"
+        className="text-slate-950 h-20 px-4 flex items-center justify-between w-full max-w-md pointer-events-auto bg-white/95 backdrop-blur-md shadow-lg rounded-[2rem] border border-slate-200/50 dark:bg-slate-950/95 dark:text-white dark:border-white/10"
       >
         {/* Left: User Initials (Circular) */}
         <div className="flex-1 flex justify-start">
@@ -83,20 +83,20 @@ export default function Navbar({ currentUser, onLogout, theme, onThemeToggle }) 
         </div>
 
         {/* Center: Dynamic Date Info */}
-        <div className="flex-[2] flex flex-col items-center justify-center text-center">
-          <h2 className="type-card-title text-slate-950 dark:text-white">
+        <div className="flex-[2] flex flex-col items-center justify-center text-center min-w-0 px-2">
+          <h2 className="type-card-title text-slate-950 dark:text-white truncate w-full">
             {title}
           </h2>
-          <p className="type-caption mt-1 flex items-center justify-center text-slate-500 dark:text-slate-400">
-            <MapPin size={12} className="mr-1 text-brand-600 dark:text-brand-400" />
-            {locationLabel}
+          <p className="type-caption mt-1 flex items-center justify-center text-slate-500 dark:text-slate-400 truncate w-full">
+            <MapPin size={12} className="mr-1 text-brand-600 flex-shrink-0 dark:text-brand-400" />
+            <span className="truncate">{locationLabel}</span>
           </p>
         </div>
 
         <div className="flex-1 flex justify-end gap-2">
           <button
             onClick={onLogout}
-            className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border border-slate-200 flex items-center justify-center text-rose-500 hover:text-rose-600 hover:border-rose-500/30 hover:bg-rose-500/5 transition-all duration-300 bg-slate-50 backdrop-blur-md shadow-inner group dark:border-white/10 dark:text-rose-400 dark:hover:text-rose-500 dark:bg-white/5"
+            className="w-12 h-12 rounded-full border border-slate-200 flex items-center justify-center text-rose-500 hover:text-rose-600 hover:border-rose-500/30 hover:bg-rose-500/5 transition-all duration-300 bg-slate-50 backdrop-blur-md shadow-inner group dark:border-white/10 dark:text-rose-400 dark:hover:text-rose-500 dark:bg-white/5"
           >
             <LogOut size={20} className="group-hover:scale-110 transition-transform duration-300" />
           </button>

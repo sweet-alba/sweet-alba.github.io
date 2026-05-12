@@ -1,16 +1,35 @@
 import { useState, useEffect } from 'react';
 import { signInAnonymously, onAuthStateChanged, signOut } from 'firebase/auth';
-import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, addDoc, orderBy, query } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, addDoc, orderBy, query, limit } from 'firebase/firestore';
 import { auth, db } from './lib/firebase';
 import { listenForegroundNotifications, registerNotificationToken } from './lib/notifications';
 import { AlertTriangle } from 'lucide-react';
-import { Button } from './components/ui';
+import { Button, AlertModal } from './components/ui';
 import LoginScreen from './components/LoginScreen';
-import StaffDashboard from './components/StaffDashboard';
-import AdminDashboard from './components/AdminDashboard';
+import StaffDashboard from './components/dashboard/staff/StaffDashboard';
+import AdminDashboard from './components/dashboard/admin/AdminDashboard';
 
 // App configuration
 const APP_ID = 'sweet-alba-absensi';
+const CLUSTER_LOCATION = { lat: -6.3854271, lng: 107.038834 }; // Sweet Alba Harvest City
+const MAX_RADIUS_METERS = 1000; // Jarak maksimal dalam meter
+
+// Helper: Calculate distance between two coordinates in meters (Haversine formula)
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371e3; // Radius bumi dalam meter
+  const φ1 = lat1 * Math.PI / 180;
+  const φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180;
+  const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) *
+    Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+}
+
 export default function App() {
   const [currentUser, setCurrentUser] = useState(() => {
     const savedUser = sessionStorage.getItem('absensi_user');
@@ -27,6 +46,18 @@ export default function App() {
     if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme;
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   });
+
+  // Custom Alert State
+  const [alertConfig, setAlertConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    variant: 'warning'
+  });
+
+  const showAlert = (title, message, variant = 'warning') => {
+    setAlertConfig({ isOpen: true, title, message, variant });
+  };
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -102,12 +133,12 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (!currentUser || currentUser.role === 'admin') return;
+    if (!currentUser || currentUser.role === 'admin' || !firebaseUser) return;
 
     registerNotificationToken(currentUser).catch((err) => {
       console.warn("Notification setup skipped:", err);
     });
-  }, [currentUser]);
+  }, [currentUser, firebaseUser]);
 
   useEffect(() => {
     let unsubscribe = () => {};
@@ -136,6 +167,53 @@ export default function App() {
     };
   }, []);
 
+  // 5. Client-Side Notification Fallback (for Spark Plan)
+  useEffect(() => {
+    if (!currentUser || currentUser.role === 'admin') return;
+
+    const logsRef = collection(db, 'apps', APP_ID, 'announcementLogs');
+    const q = query(logsRef, orderBy('createdAt', 'desc'), limit(1));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        const logDoc = snapshot.docs[0];
+        const log = logDoc.data();
+        const lastSeenId = localStorage.getItem('last_announcement_id');
+        
+        console.log("🔔 Cek Pengumuman:", log.text.substring(0, 20) + "...", "Last Seen:", lastSeenId);
+
+        if (lastSeenId && lastSeenId !== logDoc.id) {
+          console.log("🚀 Memicu Notifikasi...");
+          
+          // 1. In-App Alert (Modal) - Lebih handal karena tidak bisa diblokir OS
+          showAlert('Pengumuman Baru', log.text, 'warning');
+
+          // 2. Browser Push Notification
+          if (Notification.permission === 'granted') {
+            navigator.serviceWorker.ready.then(registration => {
+              registration.showNotification('Pengumuman Baru', {
+                body: log.text,
+                icon: '/vite.svg',
+                badge: '/vite.svg',
+                tag: 'announcement',
+                renotify: true
+              });
+            }).catch(() => {
+              new Notification('Pengumuman Baru', {
+                body: log.text,
+                icon: '/vite.svg',
+                tag: 'announcement'
+              });
+            });
+          }
+        }
+        localStorage.setItem('last_announcement_id', logDoc.id);
+      }
+    }, (err) => console.error("Notification listener error:", err));
+
+    return () => unsubscribe();
+  }, [currentUser]);
+
   // 4. Admin Logic: User Management
   const handleUserAction = async (action, userData) => {
     try {
@@ -153,7 +231,7 @@ export default function App() {
       }
     } catch (err) {
       console.error("User action error:", err);
-      alert("Gagal memproses data akun: " + err.message);
+      showAlert("Gagal Kelola Akun", err.message, 'danger');
     }
   };
 
@@ -226,9 +304,30 @@ export default function App() {
         });
       });
       location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+
+      // 2. Geofence Check
+      const distance = calculateDistance(
+        location.lat,
+        location.lng,
+        CLUSTER_LOCATION.lat,
+        CLUSTER_LOCATION.lng
+      );
+
+      if (distance > MAX_RADIUS_METERS) {
+        showAlert(
+          "Diluar Jangkauan", 
+          `Anda berada ${Math.round(distance)}m dari Cluster. Maksimal radius adalah ${MAX_RADIUS_METERS}m.`,
+          'danger'
+        );
+        return;
+      }
     } catch (err) {
       console.warn('Geolocation error:', err);
-      alert('Gagal mendapatkan lokasi. Pastikan GPS aktif dan izinkan akses lokasi untuk melakukan absensi.');
+      showAlert(
+        "Lokasi Tidak Ditemukan",
+        "Pastikan GPS aktif dan izinkan akses lokasi untuk melakukan absensi.",
+        'danger'
+      );
       return;
     }
 
@@ -261,7 +360,7 @@ export default function App() {
       await setDoc(docRef, newRecord);
     } catch (error) {
       console.error('Error clocking in:', error);
-      alert(error?.message?.replace('Firebase: ', '') || 'Gagal melakukan absensi. Silakan coba lagi.');
+      showAlert("Gagal Absen", error?.message?.replace('Firebase: ', '') || 'Gagal melakukan absensi. Silakan coba lagi.', 'danger');
     }
   };
 
@@ -278,8 +377,24 @@ export default function App() {
       });
       location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
 
+      // Geofence Check for Clock Out
+      const distance = calculateDistance(
+        location.lat,
+        location.lng,
+        CLUSTER_LOCATION.lat,
+        CLUSTER_LOCATION.lng
+      );
+
+      if (distance > MAX_RADIUS_METERS) {
+        showAlert(
+          "Diluar Jangkauan",
+          `Anda berada ${Math.round(distance)}m dari Cluster. Anda harus berada di area cluster untuk mengakhiri shift.`,
+          'danger'
+        );
+        return;
+      }
     } catch {
-      alert('Gagal memverifikasi lokasi. Pastikan GPS aktif.');
+      showAlert("Lokasi Tidak Ditemukan", "Gagal memverifikasi lokasi. Pastikan GPS aktif.", 'danger');
       return;
     }
 
@@ -291,7 +406,7 @@ export default function App() {
       });
     } catch (error) {
       console.error('Error clocking out:', error);
-      alert(error?.message?.replace('Firebase: ', '') || 'Gagal melakukan absensi pulang.');
+      showAlert("Gagal Absen Pulang", error?.message?.replace('Firebase: ', '') || 'Gagal melakukan absensi pulang.', 'danger');
     }
   };
 
@@ -362,6 +477,14 @@ export default function App() {
           announcement={announcement}
         />
       )}
+
+      <AlertModal 
+        isOpen={alertConfig.isOpen}
+        onClose={() => setAlertConfig(prev => ({ ...prev, isOpen: false }))}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        variant={alertConfig.variant}
+      />
     </>
   );
 }

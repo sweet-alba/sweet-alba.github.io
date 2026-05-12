@@ -1,20 +1,28 @@
 import { motion } from 'framer-motion';
 import { Home, Bell, TrendingUp, Users } from 'lucide-react';
 
-export default function BottomNav({ activeTab, setActiveTab }) {
-  const menuItems = [
+export default function BottomNav({ activeTab, setActiveTab, role = 'admin' }) {
+  const adminItems = [
     { id: 'attendance', icon: Home, label: 'Home' },
     { id: 'announcement', icon: Bell, label: 'Pengumuman' },
     { id: 'trends', icon: TrendingUp, label: 'Analitik' },
     { id: 'users', icon: Users, label: 'Petugas' },
   ];
 
+  const staffItems = [
+    { id: 'attendance', icon: Home, label: 'Home' },
+    { id: 'announcement', icon: Bell, label: 'Pengumuman' },
+    { id: 'trends', icon: TrendingUp, label: 'Riwayat' },
+  ];
+
+  const menuItems = role === 'admin' ? adminItems : staffItems;
+
   return (
-    <div className="fixed bottom-6 left-0 right-0 z-40 flex justify-center px-4 pointer-events-none">
+    <div className="fixed bottom-6 left-0 right-0 z-[60] flex justify-center px-4 pointer-events-none">
       <motion.div
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="w-80 bg-white/90 backdrop-blur-xl px-4 py-3 rounded-[2.5rem] shadow-sm border border-slate-200 flex items-center justify-between pointer-events-auto dark:bg-slate-950/90 dark:border-slate-800"
+        className="bg-white/90 backdrop-blur-xl px-4 py-3 rounded-[2.5rem] shadow-lg border border-slate-200 flex items-center justify-center gap-4 pointer-events-auto dark:bg-slate-950/90 dark:border-slate-800"
       >
         {menuItems.map((item) => {
           const isActive = activeTab === item.id;
@@ -38,7 +46,7 @@ export default function BottomNav({ activeTab, setActiveTab }) {
               />
 
               {/* Tooltip for desktop */}
-              <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white type-overline px-3 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none dark:bg-slate-800">
+              <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white type-overline px-3 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none dark:bg-slate-800 whitespace-nowrap">
                 {item.label}
               </span>
             </button>

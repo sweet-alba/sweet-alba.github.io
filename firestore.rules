@@ -4,19 +4,14 @@ service cloud.firestore {
     function isSignedIn() { return request.auth != null; }
 
     match /apps/{appId} {
-      match /attendances/{attendanceId} {
-        allow read, create, update, delete: if isSignedIn();
+      // General rule for all collections inside an app to simplify management
+      // while maintaining basic auth security
+      match /{collectionName}/{docId} {
+        allow read, write: if isSignedIn();
       }
-
-      match /users/{userId} {
-        allow read, create, update, delete: if isSignedIn();
-      }
-
-      match /notificationTokens/{tokenId} {
-        allow read, create, update, delete: if isSignedIn();
-      }
-
-      match /config/{docId} {
+      
+      // Specifically allow sub-collections if any (none currently used in App.jsx but good for future)
+      match /{path=**} {
         allow read, write: if isSignedIn();
       }
     }

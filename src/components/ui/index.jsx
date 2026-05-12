@@ -1,4 +1,5 @@
-import { Moon, Sun } from 'lucide-react';
+import { Sun, Moon, AlertTriangle, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/cn';
 
 export function Button({ className, variant = 'primary', size = 'md', ...props }) {
@@ -79,5 +80,55 @@ export function ThemeToggle({ theme, onToggle, className }) {
     >
       {isDark ? <Sun size={20} /> : <Moon size={20} />}
     </button>
+  );
+}
+
+export function AlertModal({ isOpen, onClose, title, message, variant = 'warning' }) {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="relative w-full max-w-sm bg-white rounded-[2.5rem] shadow-2xl overflow-hidden dark:bg-slate-900"
+          >
+            <div className="p-8 text-center">
+              <div className={cn(
+                "w-20 h-20 rounded-3xl mx-auto mb-6 flex items-center justify-center",
+                variant === 'warning' ? "bg-amber-100 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400" : "bg-rose-100 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+              )}>
+                <AlertTriangle size={40} />
+              </div>
+              <h3 className="type-card-title text-slate-900 mb-2 dark:text-white">{title}</h3>
+              <p className="type-body text-slate-500 dark:text-slate-400 leading-relaxed">
+                {message}
+              </p>
+              <Button 
+                onClick={onClose} 
+                variant={variant === 'warning' ? 'primary' : 'danger'}
+                className="w-full mt-8 h-16 rounded-3xl"
+              >
+                Mengerti
+              </Button>
+            </div>
+            <button 
+              onClick={onClose}
+              className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 dark:text-slate-600 dark:hover:text-slate-400"
+            >
+              <X size={20} />
+            </button>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 }

@@ -1,5 +1,6 @@
 import admin from 'firebase-admin';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 
 admin.initializeApp();
 
@@ -234,4 +235,56 @@ export const clockOutAttendance = onCall({ region: 'asia-southeast1' }, async (r
   });
 
   return { ok: true };
+});
+
+export const onAnnouncementCreated = onDocumentCreated({
+  document: 'apps/{appId}/announcementLogs/{logId}',
+  region: 'asia-southeast1'
+}, async (event) => {
+  const snapshot = event.data;
+  if (!snapshot) return;
+
+  const data = snapshot.data();
+  const appId = event.params.appId;
+  const messageText = data.text || 'Ada pengumuman baru';
+
+  // Fetch all tokens
+  const tokensSnapshot = await db.collection('apps').doc(appId).collection('notificationTokens').get();
+  const tokens = tokensSnapshot.docs.map(doc => doc.id);
+
+  if (tokens.length === 0) return;
+
+  const message = {
+    notification: {
+      title: 'Pengumuman Baru',
+      body: messageText.length > 100 ? messageText.substring(0, 97) + '...' : messageText
+    },
+    data: {
+      url: '/announcement'
+    },
+    tokens: tokens
+  };
+
+  try {
+    const response = await admin.messaging().sendEachForMulticast(message);
+    console.log(`${response.successCount} messages were sent successfully`);
+
+    // Clean up failed tokens
+    if (response.failureCount > 0) {
+      const failedTokens = [];
+      response.responses.forEach((resp, idx) => {
+        if (!resp.success) {
+          failedTokens.push(tokens[idx]);
+        }
+      });
+
+      const batch = db.batch();
+      failedTokens.forEach(t => {
+        batch.delete(db.collection('apps').doc(appId).collection('notificationTokens').doc(t));
+      });
+      await batch.commit();
+    }
+  } catch (error) {
+    console.error('Error sending multicast message:', error);
+  }
 });
