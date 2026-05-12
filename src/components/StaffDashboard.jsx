@@ -74,9 +74,9 @@ export default function StaffDashboard({ currentUser, onLogout, attendances, onC
     <div className="min-h-screen bg-[#f8fafc] flex flex-col">
       <Navbar currentUser={currentUser} onLogout={onLogout} />
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 pt-10 pb-6 sm:pt-14 sm:pb-8 space-y-8">
-        
-        <div className="sticky top-16 sm:top-20 z-30 bg-[#f8fafc]/90 backdrop-blur-md pt-2 pb-6 -mx-4 px-4 sm:-mx-6 sm:px-6 space-y-6">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 pt-24 pb-6 sm:pt-32 sm:pb-8 space-y-8">
+
+        <div className="sticky top-20 sm:top-24 z-30 bg-[#f8fafc]/90 backdrop-blur-md pt-2 pb-6 -mx-4 px-4 sm:-mx-6 sm:px-6 space-y-6">
           <AnimatePresence>
             {overdueRecord && (
               <motion.div
@@ -201,30 +201,30 @@ export default function StaffDashboard({ currentUser, onLogout, attendances, onC
           </section>
         </div>
 
-          <AnimatePresence>
-            {announcement && (
-              <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-              >
-                <Card className="p-6 border-none bg-brand-50 border-l-4 border-l-brand-500 rounded-3xl overflow-hidden relative group">
-                  <div className="relative z-10 flex items-start space-x-4">
-                    <div className="w-12 h-12 rounded-2xl bg-brand-500/10 flex items-center justify-center text-brand-600 flex-shrink-0">
-                      <AlertTriangle size={24} />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black text-brand-600 uppercase tracking-widest mb-1">Pengumuman Penting</p>
-                      <p className="text-base font-bold text-slate-800 leading-relaxed">{announcement}</p>
-                    </div>
+        <AnimatePresence>
+          {announcement && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <Card className="p-6 border-none bg-brand-50 border-l-4 border-l-brand-500 rounded-3xl overflow-hidden relative group">
+                <div className="relative z-10 flex items-start space-x-4">
+                  <div className="w-12 h-12 rounded-2xl bg-brand-500/10 flex items-center justify-center text-brand-600 flex-shrink-0">
+                    <AlertTriangle size={24} />
                   </div>
-                  <div className="absolute right-0 bottom-0 opacity-10 group-hover:scale-110 transition-transform">
-                    <AlertTriangle size={140} />
+                  <div>
+                    <p className="text-[10px] font-black text-brand-600 uppercase tracking-widest mb-1">Pengumuman Penting</p>
+                    <p className="text-base font-bold text-slate-800 leading-relaxed">{announcement}</p>
                   </div>
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                </div>
+                <div className="absolute right-0 bottom-0 opacity-10 group-hover:scale-110 transition-transform">
+                  <AlertTriangle size={140} />
+                </div>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <section className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

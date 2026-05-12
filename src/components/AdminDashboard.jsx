@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { LogOut, Calendar, Download, FileSpreadsheet, Users, AlertTriangle, Search, Filter, UserPlus, Settings, Trash2, Edit2, MapPin, ChevronRight } from 'lucide-react';
+import { LogOut, Calendar, Download, FileSpreadsheet, Users, AlertTriangle, Search, Filter, UserPlus, Settings, Trash2, Edit2, MapPin, ChevronRight, Bell, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button, Card, Input } from './ui';
 import { doc, setDoc } from 'firebase/firestore';
@@ -17,7 +17,7 @@ export default function AdminDashboard({ currentUser, onLogout, attendances, use
   const [editingUser, setEditingUser] = useState(null);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [selectedUserFilter, setSelectedUserFilter] = useState('all');
-  
+
   const [attendancePage, setAttendancePage] = useState(1);
   const [usersPage, setUsersPage] = useState(1);
   const [filterType, setFilterType] = useState('all'); // 'all', 'late', 'active'
@@ -74,9 +74,9 @@ export default function AdminDashboard({ currentUser, onLogout, attendances, use
   }, [selectedUserFilter, attendances]);
 
   const summaryData = {
-      total: attendances.length,
-      late: attendances.filter(a => a.latenessMins > 0).length,
-      active: attendances.filter(a => !a.checkOut).length
+    total: attendances.length,
+    late: attendances.filter(a => a.latenessMins > 0).length,
+    active: attendances.filter(a => !a.checkOut).length
   };
 
   const stats = [
@@ -135,16 +135,16 @@ export default function AdminDashboard({ currentUser, onLogout, attendances, use
     <div className="min-h-screen bg-[#f8fafc] flex flex-col pb-24">
       <Navbar currentUser={currentUser} onLogout={onLogout} />
 
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-6 sm:pt-16 sm:pb-10 w-full space-y-8 sm:space-y-10">
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 pt-24 pb-6 sm:pt-32 sm:pb-10 w-full space-y-8 sm:space-y-10">
 
         {activeTab === 'announcement' ? (
-          <AnnouncementSection 
-            announcement={announcement} 
-            onUpdateAnnouncement={onUpdateAnnouncement} 
+          <AnnouncementSection
+            announcement={announcement}
+            onUpdateAnnouncement={onUpdateAnnouncement}
           />
         ) : activeTab === 'trends' ? (
-          <TrendsSection 
-            attendances={filteredData} 
+          <TrendsSection
+            attendances={filteredData}
             summaryData={summaryData}
             setFilterType={setFilterType}
             filterType={filterType}
@@ -154,31 +154,28 @@ export default function AdminDashboard({ currentUser, onLogout, attendances, use
           />
         ) : activeTab === 'attendance' ? (
           <>
-            <section className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6">
+            <section className="grid grid-cols-2 gap-4 sm:gap-8">
               {stats.map((stat, idx) => (
                 <motion.div
                   key={stat.label}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: idx * 0.1 }}
-                  className={idx === 2 ? 'col-span-2 sm:col-span-1' : ''}
+                  className={idx === 2 ? 'col-span-2' : 'col-span-1'}
                   onClick={() => {
                     setFilterType(stat.id);
                     setAttendancePage(1);
                   }}
                 >
-                  <Card className={`p-4 sm:p-6 border-2 flex flex-col sm:flex-row sm:items-center justify-between group hover:scale-[1.02] transition-all duration-300 h-full cursor-pointer ${
-                    filterType === stat.id ? 'border-brand-500 shadow-lg' : 'border-transparent'
+                  <Card className={`p-6 sm:p-10 border-2 rounded-[2.5rem] shadow-xl shadow-slate-200/40 flex items-center space-x-6 sm:space-x-8 group cursor-pointer transition-all duration-300 ${
+                    filterType === stat.id ? 'border-brand-500 bg-white' : 'border-transparent bg-white hover:border-slate-100'
                   }`}>
-                    <div className="flex items-center sm:block lg:flex">
-                      <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl ${stat.color} flex items-center justify-center mr-3 sm:mr-0 lg:mr-5 mb-0 sm:mb-4 lg:mb-0 shadow-sm group-hover:scale-110 transition-transform`}>
-                        <stat.icon size={20} className="sm:w-7 sm:h-7" />
-                      </div>
-                      <div>
-                        <p className="text-slate-500 text-[8px] sm:text-xs font-black uppercase tracking-widest mb-0.5 sm:mb-1">{stat.label}</p>
-                        <p className="text-xl sm:text-3xl font-black text-slate-900 leading-none">{stat.value}</p>
-                        <p className="hidden sm:block text-[10px] text-slate-400 mt-2 font-bold">{stat.description}</p>
-                      </div>
+                    <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-3xl ${stat.color.split(' ')[0]} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300`}>
+                      <stat.icon size={28} className={stat.color.split(' ')[1]} />
+                    </div>
+                    <div className="flex flex-col">
+                      <p className="text-slate-400 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] mb-1 sm:mb-2">{stat.label}</p>
+                      <p className="text-3xl sm:text-5xl font-black text-slate-900 leading-tight tracking-tight">{stat.value}</p>
                     </div>
                   </Card>
                 </motion.div>
@@ -197,11 +194,11 @@ export default function AdminDashboard({ currentUser, onLogout, attendances, use
 
                   <div className="flex flex-col space-y-4">
                     <div className="relative w-full">
-                      <Input 
-                        placeholder="Cari nama petugas..." 
-                        value={searchTerm} 
-                        onChange={e => { setSearchTerm(e.target.value); setAttendancePage(1); }} 
-                        className="pl-12 py-3 rounded-xl border-slate-100 bg-slate-50/50" 
+                      <Input
+                        placeholder="Cari nama petugas..."
+                        value={searchTerm}
+                        onChange={e => { setSearchTerm(e.target.value); setAttendancePage(1); }}
+                        className="pl-12 py-3 rounded-xl border-slate-100 bg-slate-50/50"
                         icon={<Search size={18} className="text-slate-400" />}
                       />
                     </div>
@@ -210,7 +207,7 @@ export default function AdminDashboard({ currentUser, onLogout, attendances, use
                         <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                         <select
                           className="w-full pl-10 pr-10 py-3 bg-slate-50/50 border border-slate-100 rounded-xl text-xs font-black focus:outline-none focus:ring-4 focus:ring-brand-500/10 appearance-none"
-                          value={selectedUserFilter} 
+                          value={selectedUserFilter}
                           onChange={e => { setSelectedUserFilter(e.target.value); setAttendancePage(1); }}
                         >
                           <option value="all">Pilih Petugas (Semua)</option>
@@ -223,7 +220,7 @@ export default function AdminDashboard({ currentUser, onLogout, attendances, use
                         <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                         <select
                           className="w-full pl-10 pr-10 py-3 bg-slate-50/50 border border-slate-100 rounded-xl text-xs font-black focus:outline-none focus:ring-4 focus:ring-brand-500/10 appearance-none"
-                          value={filterRole} 
+                          value={filterRole}
                           onChange={e => { setFilterRole(e.target.value); setAttendancePage(1); }}
                         >
                           <option value="all">Semua Peran</option>
@@ -239,24 +236,24 @@ export default function AdminDashboard({ currentUser, onLogout, attendances, use
                   </div>
                 </div>
 
-                <AttendanceSection 
-                  filteredData={filteredData} 
-                  paginatedAttendance={paginatedAttendance} 
-                  attendancePage={attendancePage} 
-                  setAttendancePage={setAttendancePage} 
-                  totalAttendancePages={totalAttendancePages} 
+                <AttendanceSection
+                  filteredData={filteredData}
+                  paginatedAttendance={paginatedAttendance}
+                  attendancePage={attendancePage}
+                  setAttendancePage={setAttendancePage}
+                  totalAttendancePages={totalAttendancePages}
                   ITEMS_PER_PAGE={ITEMS_PER_PAGE}
-                  setSelectedRecord={setSelectedRecord} 
+                  setSelectedRecord={setSelectedRecord}
                 />
               </Card>
             </section>
           </>
         ) : (
-          <UserManagementSection 
-            users={users} 
-            onUserAction={onUserAction} 
-            usersPage={usersPage} 
-            setUsersPage={setUsersPage} 
+          <UserManagementSection
+            users={users}
+            onUserAction={onUserAction}
+            usersPage={usersPage}
+            setUsersPage={setUsersPage}
             ITEMS_PER_PAGE={ITEMS_PER_PAGE}
           />
         )}
@@ -421,131 +418,11 @@ function AttendanceSection({ filteredData, paginatedAttendance, attendancePage, 
   );
 }
 
-function TrendsSection({ attendances, summaryData, setFilterType, filterType, setCurrentPage, users, onUserAction }) {
-  const [localAnn, setLocalAnn] = useState(announcement || '');
-  const [isSimulating, setIsSimulating] = useState(false);
-
-  // Calculate trends for the last 7 days
-  const chartData = useMemo(() => {
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      return d.toLocaleDateString('id-ID');
-    }).reverse();
-
-    return last7Days.map(date => {
-      const count = attendances.filter(a => a.date === date).length;
-      return { 
-        name: date.split('/')[0], 
-        fullDate: date, 
-        count: count 
-      };
-    });
-  }, [attendances]);
-
-  const handleSeedCleaner = async () => {
-    setIsSimulating(true);
-    const APP_ID = 'sweet-alba-absensi';
-    const TEST_USER_ID = 'cln_test_siti';
-    
-    try {
-      const siti = {
-        id: TEST_USER_ID,
-        name: 'Siti Aminah (Test)',
-        username: '081299887766',
-        password: '123',
-        role: 'cleaner'
-      };
-      
-      await onUserAction('add', siti);
-
-      const batchSize = 90;
-      for (let i = 0; i < batchSize; i++) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        
-        const dateStr = d.toLocaleDateString('id-ID');
-        const recordId = `test-siti-${i}`;
-        
-        const checkInDate = new Date(d);
-        const isLate = Math.random() > 0.8;
-        const hour = isLate ? 9 : 8;
-        const minute = isLate ? Math.floor(Math.random() * 20) + 1 : Math.floor(Math.random() * 59);
-        checkInDate.setHours(hour, minute, 0);
-
-        const lateness = isLate ? minute : 0;
-
-        await setDoc(doc(db, 'apps', APP_ID, 'attendances', recordId), {
-          userId: siti.id,
-          userName: siti.name,
-          role: siti.role,
-          date: dateStr,
-          shift: 'CLEANER (Shift Pagi 09:00 - 16:00)',
-          checkIn: checkInDate,
-          checkOut: new Date(checkInDate.getTime() + 7 * 60 * 60 * 1000), 
-          latenessMins: lateness,
-          locationIn: { lat: -6.22, lng: 106.81 }
-        }, { merge: true });
-      }
-      alert("User 'Siti Aminah' dan 3 bulan log berhasil dibuat!");
-    } catch (err) {
-      console.error(err);
-      alert("Gagal seeding data: " + err.message);
-    }
-    setIsSimulating(false);
-  };
-
-  const handleGenerateDummy = async () => {
-    setIsSimulating(true);
-    const APP_ID = 'sweet-alba-absensi';
-    
-    try {
-      const staffUsers = users.filter(u => u.role !== 'admin');
-      if (staffUsers.length === 0) {
-        alert("Tidak ada user petugas untuk simulasi data.");
-        setIsSimulating(false);
-        return;
-      }
-
-      for (let i = 0; i < 7; i++) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const dateStr = d.toLocaleDateString('id-ID');
-        
-        const dailyCount = Math.floor(Math.random() * 3) + 2; 
-        const randomUsers = [...staffUsers].sort(() => 0.5 - Math.random()).slice(0, dailyCount);
-
-        for (const user of randomUsers) {
-          const recordId = `dummy-${dateStr}-${user.id}`;
-          const checkInDate = new Date(d);
-          checkInDate.setHours(7, Math.floor(Math.random() * 30), 0); 
-
-          await setDoc(doc(db, 'apps', APP_ID, 'attendances', recordId), {
-            userId: user.id,
-            userName: user.name,
-            role: user.role,
-            date: dateStr,
-            shift: 'SECURITY_1 (Pagi 07:00 - 15:00)',
-            checkIn: checkInDate,
-            checkOut: new Date(checkInDate.getTime() + 8 * 60 * 60 * 1000), 
-            latenessMins: 0,
-            locationIn: { lat: -6.2, lng: 106.8 }
-          }, { merge: true });
-        }
-      }
-      alert("Simulasi data berhasil! Grafik akan segera terupdate.");
-    } catch (err) {
-      console.error(err);
-      alert("Gagal simulasi data: " + err.message);
-    }
-    setIsSimulating(false);
-  };
-
 function AnnouncementSection({ announcement, onUpdateAnnouncement }) {
   const [localAnn, setLocalAnn] = useState(announcement || '');
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       className="max-w-2xl mx-auto"
@@ -562,15 +439,15 @@ function AnnouncementSection({ announcement, onUpdateAnnouncement }) {
         </div>
 
         <div className="space-y-6">
-          <textarea 
+          <textarea
             className="w-full h-48 p-6 bg-slate-50 border border-slate-100 rounded-[2rem] text-sm font-medium focus:ring-4 focus:ring-brand-500/10 outline-none resize-none transition-all"
             placeholder="Tulis instruksi atau pengumuman hari ini yang akan muncul di dashboard petugas..."
             value={localAnn}
             onChange={(e) => setLocalAnn(e.target.value)}
           />
-          
-          <Button 
-            className="w-full py-4 rounded-2xl font-black uppercase tracking-widest text-xs" 
+
+          <Button
+            className="w-full py-4 rounded-2xl font-black uppercase tracking-widest text-xs"
             onClick={() => onUpdateAnnouncement(localAnn)}
           >
             Update Pengumuman Sekarang
@@ -578,12 +455,12 @@ function AnnouncementSection({ announcement, onUpdateAnnouncement }) {
         </div>
 
         <div className="mt-8 p-6 bg-amber-50 rounded-2xl border border-amber-100">
-           <div className="flex space-x-3 text-amber-800">
-              <AlertTriangle size={18} className="shrink-0 mt-0.5" />
-              <p className="text-[10px] font-bold leading-relaxed uppercase tracking-wider">
-                Peringatan: Pengumuman ini akan langsung terlihat oleh semua staff saat mereka membuka dashboard masing-masing.
-              </p>
-           </div>
+          <div className="flex space-x-3 text-amber-800">
+            <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+            <p className="text-[10px] font-bold leading-relaxed uppercase tracking-wider">
+              Peringatan: Pengumuman ini akan langsung terlihat oleh semua staff saat mereka membuka dashboard masing-masing.
+            </p>
+          </div>
         </div>
       </Card>
     </motion.div>
@@ -611,7 +488,7 @@ function TrendsSection({ attendances, summaryData, setFilterType, filterType, se
   const handleGenerateDummy = async () => {
     setIsSimulating(true);
     const APP_ID = 'sweet-alba-absensi';
-    
+
     try {
       const staffUsers = users.filter(u => u.role !== 'admin');
       if (staffUsers.length === 0) {
@@ -624,14 +501,14 @@ function TrendsSection({ attendances, summaryData, setFilterType, filterType, se
         const d = new Date();
         d.setDate(d.getDate() - i);
         const dateStr = d.toLocaleDateString('id-ID');
-        
-        const dailyCount = Math.floor(Math.random() * 3) + 2; 
+
+        const dailyCount = Math.floor(Math.random() * 3) + 2;
         const randomUsers = [...staffUsers].sort(() => 0.5 - Math.random()).slice(0, dailyCount);
 
         for (const user of randomUsers) {
           const recordId = `dummy-${dateStr}-${user.id}`;
           const checkInDate = new Date(d);
-          checkInDate.setHours(7, Math.floor(Math.random() * 30), 0); 
+          checkInDate.setHours(7, Math.floor(Math.random() * 30), 0);
 
           await setDoc(doc(db, 'apps', APP_ID, 'attendances', recordId), {
             userId: user.id,
@@ -640,7 +517,7 @@ function TrendsSection({ attendances, summaryData, setFilterType, filterType, se
             date: dateStr,
             shift: 'SECURITY_1 (Pagi 07:00 - 15:00)',
             checkIn: checkInDate,
-            checkOut: new Date(checkInDate.getTime() + 8 * 60 * 60 * 1000), 
+            checkOut: new Date(checkInDate.getTime() + 8 * 60 * 60 * 1000),
             latenessMins: 0,
             locationIn: { lat: -6.2, lng: 106.8 }
           }, { merge: true });
@@ -658,7 +535,7 @@ function TrendsSection({ attendances, summaryData, setFilterType, filterType, se
     setIsSimulating(true);
     const APP_ID = 'sweet-alba-absensi';
     const cleanerUsers = users.filter(u => u.role === 'cleaner');
-    
+
     if (cleanerUsers.length === 0) {
       alert("Tidak ada user Cleaner untuk disemai.");
       setIsSimulating(false);
@@ -670,11 +547,11 @@ function TrendsSection({ attendances, summaryData, setFilterType, filterType, se
         const d = new Date();
         d.setDate(d.getDate() - i);
         const dateStr = d.toLocaleDateString('id-ID');
-        
+
         for (const user of cleanerUsers) {
           const recordId = `seed-${dateStr}-${user.id}`;
           const checkInDate = new Date(d);
-          checkInDate.setHours(8, 0, 0); 
+          checkInDate.setHours(8, 0, 0);
 
           await setDoc(doc(db, 'apps', APP_ID, 'attendances', recordId), {
             userId: user.id,
@@ -683,7 +560,7 @@ function TrendsSection({ attendances, summaryData, setFilterType, filterType, se
             date: dateStr,
             shift: 'CLEANING_MORNING (Pagi)',
             checkIn: checkInDate,
-            checkOut: new Date(checkInDate.getTime() + 7 * 60 * 60 * 1000), 
+            checkOut: new Date(checkInDate.getTime() + 7 * 60 * 60 * 1000),
             latenessMins: 0,
             locationIn: { lat: -6.2, lng: 106.8 }
           }, { merge: true });
@@ -698,7 +575,7 @@ function TrendsSection({ attendances, summaryData, setFilterType, filterType, se
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="space-y-8"
@@ -714,18 +591,18 @@ function TrendsSection({ attendances, summaryData, setFilterType, filterType, se
               <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Performa 7 hari terakhir</p>
             </div>
           </div>
-          
+
           <div className="flex flex-wrap gap-3">
-            <Button 
-              variant="secondary" 
+            <Button
+              variant="secondary"
               className="h-12 rounded-2xl px-6 font-black text-[10px] uppercase tracking-widest shadow-sm"
               onClick={handleGenerateDummy}
               disabled={isSimulating}
             >
               {isSimulating ? 'Memproses...' : 'Simulasi 7 Hari'}
             </Button>
-            <Button 
-              variant="secondary" 
+            <Button
+              variant="secondary"
               className="h-12 rounded-2xl px-6 font-black text-[10px] uppercase tracking-widest shadow-sm"
               onClick={handleSeedCleaner}
               disabled={isSimulating}
@@ -734,21 +611,21 @@ function TrendsSection({ attendances, summaryData, setFilterType, filterType, se
             </Button>
           </div>
         </div>
-        
+
         <div className="flex items-end justify-between h-72 gap-3 pt-10 px-2 border-b border-slate-50 pb-6">
           {chartData.map((day, i) => {
             const maxCount = Math.max(...chartData.map(d => d.count), 1);
             const heightPercentage = (day.count / maxCount) * 100;
-            
+
             return (
               <div key={day.fullDate} className="flex-1 flex flex-col items-center group relative h-full justify-end">
                 <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] py-1.5 px-3 rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap z-20 shadow-2xl pointer-events-none mb-2 transform group-hover:-translate-y-1 font-black">
                   {day.count} Orang
                 </div>
-                
+
                 <div className="w-full flex flex-col items-center justify-end h-full">
                   {day.count > 0 ? (
-                    <motion.div 
+                    <motion.div
                       initial={{ height: 0 }}
                       animate={{ height: `${heightPercentage}%` }}
                       transition={{ delay: i * 0.1, duration: 0.8, ease: "easeOut" }}
@@ -758,7 +635,7 @@ function TrendsSection({ attendances, summaryData, setFilterType, filterType, se
                     <div className="w-full max-w-[40px] h-2 bg-slate-100 rounded-full" />
                   )}
                 </div>
-                
+
                 <p className="text-[10px] font-black text-slate-400 mt-4 uppercase tracking-widest group-hover:text-slate-900 transition-colors">
                   {day.name}
                 </p>
@@ -790,7 +667,7 @@ export function AttendanceDetailModal({ record, onClose }) {
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/70 backdrop-blur-md">
       <motion.div initial={{ y: "100%", opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: "100%", opacity: 0 }} className="bg-white w-full max-w-xl rounded-t-[2.5rem] sm:rounded-[2.5rem] overflow-hidden shadow-2xl relative">
-        <button onClick={onClose} className="absolute top-6 right-6 p-2 bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors z-10"><LogOut size={20} className="rotate-180" /></button>
+        <button onClick={onClose} className="absolute top-6 right-6 p-2 bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors z-10"><X size={20} /></button>
         <div className="p-8 sm:p-10 space-y-8">
           <div className="flex items-center space-x-5">
             <div className="w-16 h-16 rounded-3xl bg-slate-900 flex items-center justify-center text-white font-black text-2xl uppercase">{record.userName.charAt(0)}</div>
@@ -940,18 +817,18 @@ function UserManagementSection({ users, onUserAction, usersPage, setUsersPage, I
               <h3 className="text-2xl font-black text-slate-900 mb-8">{editingUser ? 'Edit Akun' : 'Akun Baru'}</h3>
               <form onSubmit={handleSubmit} className="space-y-5">
                 <Input label="Nama Lengkap" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required className="rounded-xl" />
-                <Input 
-                  label="Nomor Handphone" 
-                  placeholder="Contoh: 0812..." 
-                  value={formData.username} 
+                <Input
+                  label="Nomor Handphone"
+                  placeholder="Contoh: 0812..."
+                  value={formData.username}
                   onChange={e => {
                     const val = e.target.value;
                     if (val === '' || /^\d+$/.test(val)) {
                       setFormData({ ...formData, username: val });
                     }
-                  }} 
-                  required 
-                  className="rounded-xl" 
+                  }}
+                  required
+                  className="rounded-xl"
                 />
                 <Input label="Password" type="text" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} required className="rounded-xl" />
                 <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Peran Akses</label><select className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:ring-4 focus:ring-brand-500/10 outline-none appearance-none" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}><option value="security">Keamanan (Security)</option><option value="cleaner">Kebersihan (Cleaner)</option><option value="admin">Administrator</option></select></div>

@@ -1,94 +1,58 @@
-import { LogOut, User, Menu, X, Shield, LayoutDashboard, Settings } from 'lucide-react';
+import { LogOut, User, Menu, X, Shield, LayoutDashboard, Settings, LayoutGrid, Calendar as CalendarIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from './ui';
 
 export default function Navbar({ currentUser, onLogout }) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentDate(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   const isAdmin = currentUser.role === 'admin';
 
+  // Format date parts to match reference image
+  const monthYear = currentDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  const fullDate = currentDate.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
+
   return (
-    <nav className="bg-slate-900/95 backdrop-blur-md text-white sticky top-0 z-50 border-b border-slate-800">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex justify-between items-center h-16 sm:h-20">
-          {/* Logo & Brand */}
-          <div className="flex items-center space-x-3">
-            <div className="bg-brand-500 p-2 rounded-xl shadow-lg shadow-brand-500/20">
-              {isAdmin ? <Shield size={20} className="text-white" /> : <LayoutDashboard size={20} className="text-white" />}
-            </div>
-            <div>
-              <h1 className="font-black text-base sm:text-lg tracking-tight leading-none">Sweet Alba</h1>
-              <p className="text-slate-500 text-[8px] font-bold uppercase tracking-[0.2em] mt-1">
-                {isAdmin ? 'Management System' : 'Attendance App'}
-              </p>
-            </div>
-          </div>
-
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-6">
-            <div className="flex flex-col items-end mr-2">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{isAdmin ? 'Administrator' : 'Petugas Lapangan'}</span>
-              <span className="text-sm font-bold text-slate-200">{currentUser.name}</span>
-            </div>
-            <Button 
-              variant="danger" 
-              size="sm" 
-              onClick={onLogout}
-              className="bg-slate-800 hover:bg-rose-600 border-none px-4 py-2 rounded-xl"
-            >
-              <LogOut size={16} className="mr-2" />
-              Keluar
-            </Button>
-          </div>
-
-          {/* Mobile Menu Button */}
-          <div className="md:hidden">
-            <button 
-              onClick={() => setIsOpen(!isOpen)}
-              className="p-2 text-slate-300 hover:text-white transition-colors"
-            >
-              {isOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
+    <div className="fixed top-6 left-0 right-0 z-[60] flex justify-center px-4 pointer-events-none">
+      <motion.nav 
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="bg-slate-900/90 backdrop-blur-2xl text-white h-20 sm:h-24 px-8 rounded-[3rem] shadow-2xl shadow-slate-950/40 border border-white/5 flex items-center justify-between w-full max-w-4xl pointer-events-auto"
+      >
+        {/* Left: User Initials (Circular) */}
+        <div className="flex-1 flex justify-start">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border border-white/10 flex items-center justify-center text-slate-300 bg-white/5 backdrop-blur-md shadow-inner">
+            <span className="text-xs sm:text-sm font-black uppercase tracking-widest">
+              {currentUser.name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
+            </span>
           </div>
         </div>
-      </div>
 
-      {/* Mobile Menu Overlay */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-slate-800 border-b border-slate-700 overflow-hidden"
+        {/* Center: Dynamic Date Info */}
+        <div className="flex-[2] flex flex-col items-center justify-center text-center">
+          <h2 className="text-base sm:text-xl font-black tracking-tight leading-none text-white">
+            {monthYear}
+          </h2>
+          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1 sm:mt-2 opacity-80">
+            {fullDate}
+          </p>
+        </div>
+
+        {/* Right: Logout Action (Circular) */}
+        <div className="flex-1 flex justify-end">
+          <button 
+            onClick={onLogout}
+            className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border border-white/10 flex items-center justify-center text-rose-400 hover:text-rose-500 hover:border-rose-500/30 hover:bg-rose-500/5 transition-all duration-300 bg-white/5 backdrop-blur-md shadow-inner group"
           >
-            <div className="px-4 py-6 space-y-4">
-              <div className="flex items-center space-x-4 p-4 bg-slate-900/50 rounded-2xl">
-                <div className="w-12 h-12 rounded-full bg-brand-500/20 flex items-center justify-center text-brand-400 border border-brand-500/20">
-                  <User size={24} />
-                </div>
-                <div>
-                  <p className="text-xs font-black text-slate-500 uppercase tracking-widest leading-none mb-1">
-                    {isAdmin ? 'Administrator' : 'Petugas'}
-                  </p>
-                  <p className="font-bold text-white">{currentUser.name}</p>
-                </div>
-              </div>
-              
-              <Button 
-                variant="danger" 
-                size="md" 
-                onClick={onLogout}
-                className="w-full bg-rose-600 hover:bg-rose-700 text-white border-none py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px]"
-              >
-                <LogOut size={18} className="mr-3" />
-                Logout dari Akun
-              </Button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </nav>
+            <LogOut size={20} className="group-hover:scale-110 transition-transform duration-300" />
+          </button>
+        </div>
+      </motion.nav>
+    </div>
   );
 }
