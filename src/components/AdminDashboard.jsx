@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button, Card, Input } from './ui';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import Navbar from './Navbar';
 
 export default function AdminDashboard({ currentUser, onLogout, attendances, users = [], onUserAction, announcement, onUpdateAnnouncement }) {
   const [activeTab, setActiveTab] = useState('attendance'); // 'attendance', 'users', or 'trends'
@@ -18,22 +19,34 @@ export default function AdminDashboard({ currentUser, onLogout, attendances, use
   
   const [attendancePage, setAttendancePage] = useState(1);
   const [usersPage, setUsersPage] = useState(1);
+  const [filterType, setFilterType] = useState('all'); // 'all', 'late', 'active'
   const ITEMS_PER_PAGE = 10;
 
   const filteredData = useMemo(() => {
-    return attendances
-      .filter(record => {
-        const matchesSearch = record.userName.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesRole = filterRole === 'all' || record.role === filterRole;
-        const matchesUser = selectedUserFilter === 'all' || record.userId === selectedUserFilter;
-        return matchesSearch && matchesRole && matchesUser;
-      })
-      .sort((a, b) => {
-        const dateA = a.checkIn?.toDate ? a.checkIn.toDate() : new Date(a.checkIn);
-        const dateB = b.checkIn?.toDate ? b.checkIn.toDate() : new Date(b.checkIn);
-        return dateB - dateA;
-      });
-  }, [attendances, searchTerm, filterRole, selectedUserFilter]);
+    let data = attendances.filter(record => {
+      const matchesSearch = record.userName.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesRole = filterRole === 'all' || record.role === filterRole;
+      const matchesUser = selectedUserFilter === 'all' || record.userId === selectedUserFilter;
+      return matchesSearch && matchesRole && matchesUser;
+    });
+
+    switch (filterType) {
+      case 'late':
+        data = data.filter(a => a.latenessMins > 0);
+        break;
+      case 'active':
+        data = data.filter(a => !a.checkOut);
+        break;
+      default:
+        break;
+    }
+
+    return data.sort((a, b) => {
+      const dateA = a.checkIn?.toDate ? a.checkIn.toDate() : new Date(a.checkIn);
+      const dateB = b.checkIn?.toDate ? b.checkIn.toDate() : new Date(b.checkIn);
+      return dateB - dateA;
+    });
+  }, [attendances, searchTerm, filterRole, selectedUserFilter, filterType]);
 
   // Attendance Pagination
   const totalAttendancePages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
@@ -58,6 +71,39 @@ export default function AdminDashboard({ currentUser, onLogout, attendances, use
       totalLateTime: `${lateHours}j ${lateMins}m`
     };
   }, [selectedUserFilter, attendances]);
+
+  const summaryData = {
+      total: attendances.length,
+      late: attendances.filter(a => a.latenessMins > 0).length,
+      active: attendances.filter(a => !a.checkOut).length
+  };
+
+  const stats = [
+    {
+      id: 'all',
+      label: 'Total Absensi',
+      value: summaryData.total,
+      icon: Users,
+      color: 'bg-blue-50 text-blue-600',
+      description: 'Seluruh catatan bulan ini'
+    },
+    {
+      id: 'late',
+      label: 'Keterlambatan',
+      value: summaryData.late,
+      icon: AlertTriangle,
+      color: 'bg-rose-50 text-rose-600',
+      description: 'Butuh perhatian khusus'
+    },
+    {
+      id: 'active',
+      label: 'Aktif Sekarang',
+      value: summaryData.active,
+      icon: Calendar,
+      color: 'bg-brand-50 text-brand-600',
+      description: 'Petugas di lapangan'
+    },
+  ];
 
   const exportToCSV = () => {
     let csvContent = "data:text/csv;charset=utf-8,";
@@ -84,55 +130,9 @@ export default function AdminDashboard({ currentUser, onLogout, attendances, use
     document.body.removeChild(link);
   };
 
-  const stats = [
-    {
-      label: 'Total Absensi',
-      value: attendances.length,
-      icon: Users,
-      color: 'bg-blue-50 text-blue-600',
-      description: 'Seluruh catatan bulan ini'
-    },
-    {
-      label: 'Keterlambatan',
-      value: attendances.filter(a => a.latenessMins > 0).length,
-      icon: AlertTriangle,
-      color: 'bg-rose-50 text-rose-600',
-      description: 'Butuh perhatian khusus'
-    },
-    {
-      label: 'Aktif Sekarang',
-      value: attendances.filter(a => !a.checkOut).length,
-      icon: Calendar,
-      color: 'bg-brand-50 text-brand-600',
-      description: 'Petugas di lapangan'
-    },
-  ];
-
   return (
     <div className="min-h-screen bg-[#f8fafc] flex flex-col">
-      <header className="bg-slate-900 text-white shadow-2xl sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center space-x-3 sm:space-x-4">
-            <div className="bg-brand-500 p-2 sm:p-2.5 rounded-xl sm:rounded-2xl">
-              <FileSpreadsheet size={20} className="text-white sm:w-6 sm:h-6" />
-            </div>
-            <div>
-              <h1 className="font-black text-lg sm:text-xl tracking-tight leading-none">Admin</h1>
-              <p className="text-slate-400 text-[8px] sm:text-[10px] font-bold uppercase tracking-[0.2em] mt-1">Management System</p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-3 sm:space-x-6">
-            <div className="hidden sm:block text-right">
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Administrator</p>
-              <p className="text-sm font-bold text-slate-200">{currentUser.name}</p>
-            </div>
-            <Button variant="danger" size="sm" onClick={onLogout} className="bg-slate-800 hover:bg-rose-600 border-none px-3 py-2 sm:px-4">
-              <LogOut size={16} className="sm:mr-2" />
-              <span className="hidden sm:inline">Keluar</span>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <Navbar currentUser={currentUser} onLogout={onLogout} />
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 w-full space-y-8 sm:space-y-10">
         <div className="flex space-x-1 bg-slate-200/50 p-1 rounded-2xl w-full sm:w-fit overflow-x-auto no-scrollbar">
@@ -158,7 +158,11 @@ export default function AdminDashboard({ currentUser, onLogout, attendances, use
 
         {activeTab === 'trends' ? (
           <TrendsSection 
-            attendances={attendances} 
+            attendances={filteredData} 
+            summaryData={summaryData}
+            setFilterType={setFilterType}
+            filterType={filterType}
+            setCurrentPage={setAttendancePage}
             announcement={announcement} 
             onUpdateAnnouncement={onUpdateAnnouncement}
             users={users}
@@ -174,8 +178,14 @@ export default function AdminDashboard({ currentUser, onLogout, attendances, use
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.1 }}
                   className={idx === 2 ? 'col-span-2 sm:col-span-1' : ''}
+                  onClick={() => {
+                    setFilterType(stat.id);
+                    setAttendancePage(1);
+                  }}
                 >
-                  <Card className="p-4 sm:p-6 border-none flex flex-col sm:flex-row sm:items-center justify-between group hover:scale-[1.02] transition-all duration-300 h-full">
+                  <Card className={`p-4 sm:p-6 border-2 flex flex-col sm:flex-row sm:items-center justify-between group hover:scale-[1.02] transition-all duration-300 h-full cursor-pointer ${
+                    filterType === stat.id ? 'border-brand-500 shadow-lg' : 'border-transparent'
+                  }`}>
                     <div className="flex items-center sm:block lg:flex">
                       <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl ${stat.color} flex items-center justify-center mr-3 sm:mr-0 lg:mr-5 mb-0 sm:mb-4 lg:mb-0 shadow-sm group-hover:scale-110 transition-transform`}>
                         <stat.icon size={20} className="sm:w-7 sm:h-7" />
@@ -242,33 +252,6 @@ export default function AdminDashboard({ currentUser, onLogout, attendances, use
                         Export Data (.CSV)
                       </Button>
                     </div>
-                    <AnimatePresence>
-                      {userStats && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                        >
-                          <Card className="p-6 border-none bg-slate-900 text-white overflow-hidden relative">
-                            <div className="relative z-10 grid grid-cols-3 gap-8">
-                              <div className="text-center">
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Total Absensi</p>
-                                <p className="text-2xl font-black">{userStats.total}</p>
-                              </div>
-                              <div className="text-center border-x border-slate-800">
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Frekuensi Telat</p>
-                                <p className="text-2xl font-black text-rose-400">{userStats.lateCount}</p>
-                              </div>
-                              <div className="text-center">
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Akumulasi Telat</p>
-                                <p className="text-2xl font-black text-amber-400">{userStats.totalLateTime}</p>
-                              </div>
-                            </div>
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
-                          </Card>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
                   </div>
                 </div>
 
@@ -458,39 +441,34 @@ function AttendanceSection({ filteredData, paginatedAttendance, attendancePage, 
   );
 }
 
-function TrendsSection({ attendances, announcement, onUpdateAnnouncement, users, onUserAction }) {
+function TrendsSection({ attendances, summaryData, setFilterType, filterType, setCurrentPage, announcement, onUpdateAnnouncement, users, onUserAction }) {
   const [localAnn, setLocalAnn] = useState(announcement || '');
   const [isSimulating, setIsSimulating] = useState(false);
 
   // Calculate trends for the last 7 days
   const chartData = useMemo(() => {
-    // Generate array of 7 dates in id-ID format
     const last7Days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      // We need to match the format used in clock-in: toLocaleDateString('id-ID')
       return d.toLocaleDateString('id-ID');
     }).reverse();
 
     return last7Days.map(date => {
-      // Filter attendances that match this specific date string
       const count = attendances.filter(a => a.date === date).length;
       return { 
-        name: date.split('/')[0], // Just the day number
+        name: date.split('/')[0], 
         fullDate: date, 
         count: count 
       };
     });
   }, [attendances]);
 
-  // Helper to seed a new cleaner and 3 months of data
   const handleSeedCleaner = async () => {
     setIsSimulating(true);
     const APP_ID = 'sweet-alba-absensi';
     const TEST_USER_ID = 'cln_test_siti';
     
     try {
-      // 1. Create the user Siti Aminah
       const siti = {
         id: TEST_USER_ID,
         name: 'Siti Aminah (Test)',
@@ -501,18 +479,15 @@ function TrendsSection({ attendances, announcement, onUpdateAnnouncement, users,
       
       await onUserAction('add', siti);
 
-      // 2. Generate 90 days of data
       const batchSize = 90;
       for (let i = 0; i < batchSize; i++) {
         const d = new Date();
         d.setDate(d.getDate() - i);
         
-        // Skip Sundays (Optional, but let's just do every day for maximum data)
         const dateStr = d.toLocaleDateString('id-ID');
         const recordId = `test-siti-${i}`;
         
         const checkInDate = new Date(d);
-        // Cleaner shift starts at 09:00. Let's make some days late.
         const isLate = Math.random() > 0.8;
         const hour = isLate ? 9 : 8;
         const minute = isLate ? Math.floor(Math.random() * 20) + 1 : Math.floor(Math.random() * 59);
@@ -527,7 +502,7 @@ function TrendsSection({ attendances, announcement, onUpdateAnnouncement, users,
           date: dateStr,
           shift: 'CLEANER (Shift Pagi 09:00 - 16:00)',
           checkIn: checkInDate,
-          checkOut: new Date(checkInDate.getTime() + 7 * 60 * 60 * 1000), // 7 hours later
+          checkOut: new Date(checkInDate.getTime() + 7 * 60 * 60 * 1000), 
           latenessMins: lateness,
           locationIn: { lat: -6.22, lng: 106.81 }
         }, { merge: true });
@@ -552,20 +527,18 @@ function TrendsSection({ attendances, announcement, onUpdateAnnouncement, users,
         return;
       }
 
-      // Generate for last 7 days
       for (let i = 0; i < 7; i++) {
         const d = new Date();
         d.setDate(d.getDate() - i);
         const dateStr = d.toLocaleDateString('id-ID');
         
-        // Randomly pick 2-4 users to attend each day
         const dailyCount = Math.floor(Math.random() * 3) + 2; 
         const randomUsers = [...staffUsers].sort(() => 0.5 - Math.random()).slice(0, dailyCount);
 
         for (const user of randomUsers) {
           const recordId = `dummy-${dateStr}-${user.id}`;
           const checkInDate = new Date(d);
-          checkInDate.setHours(7, Math.floor(Math.random() * 30), 0); // Random checkin around 7 AM
+          checkInDate.setHours(7, Math.floor(Math.random() * 30), 0); 
 
           await setDoc(doc(db, 'apps', APP_ID, 'attendances', recordId), {
             userId: user.id,
@@ -574,7 +547,7 @@ function TrendsSection({ attendances, announcement, onUpdateAnnouncement, users,
             date: dateStr,
             shift: 'SECURITY_1 (Pagi 07:00 - 15:00)',
             checkIn: checkInDate,
-            checkOut: new Date(checkInDate.getTime() + 8 * 60 * 60 * 1000), // 8 hours later
+            checkOut: new Date(checkInDate.getTime() + 8 * 60 * 60 * 1000), 
             latenessMins: 0,
             locationIn: { lat: -6.2, lng: 106.8 }
           }, { merge: true });

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button, Card } from './ui';
 import DigitalClock from './Clock';
 import { SHIFTS } from '../constants';
+import Navbar from './Navbar';
 import { AttendanceDetailModal } from './AdminDashboard';
 
 export default function StaffDashboard({ currentUser, onLogout, attendances, onClockIn, onClockOut, announcement }) {
@@ -70,26 +71,8 @@ export default function StaffDashboard({ currentUser, onLogout, attendances, onC
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc]">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <div className="premium-gradient p-2.5 rounded-2xl shadow-lg shadow-brand-500/20">
-              <User size={24} className="text-white" />
-            </div>
-            <div>
-              <h1 className="font-bold text-slate-900 leading-tight">{currentUser.name}</h1>
-              <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">
-                {currentUser.role === 'security' ? 'Petugas Keamanan' : 'Petugas Kebersihan'}
-              </p>
-            </div>
-          </div>
-          <Button variant="secondary" size="sm" onClick={onLogout}>
-            <LogOut size={16} className="mr-2" />
-            Keluar
-          </Button>
-        </div>
-      </header>
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col">
+      <Navbar currentUser={currentUser} onLogout={onLogout} />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8">
         
@@ -432,11 +415,6 @@ export default function StaffDashboard({ currentUser, onLogout, attendances, onC
         onClose={() => setSelectedRecord(null)}
       />
 
-      <footer className="bg-white border-t border-slate-100 py-8 mt-auto">
-        <div className="max-w-5xl mx-auto px-6 text-center text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
-          &copy; {new Date().getFullYear()} Sweet Alba Security System
-        </div>
-      </footer>
     </div>
   );
 }
