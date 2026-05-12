@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getMessaging, isSupported } from 'firebase/messaging';
 
 // In a real project, these would be in .env files.
 // For this migration, we check for window.__firebase_config or environment variables.
@@ -17,5 +18,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export { firebaseConfig };
+
+export async function getFirebaseMessaging() {
+  const supported = await isSupported();
+  if (!supported) return null;
+  return getMessaging(app);
+}
 
 export default app;

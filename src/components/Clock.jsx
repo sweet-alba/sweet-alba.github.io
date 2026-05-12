@@ -33,11 +33,11 @@ export default function DigitalClock({ className }) {
         key={time.getSeconds()}
         initial={{ opacity: 0.8 }}
         animate={{ opacity: 1 }}
-        className="text-5xl md:text-7xl font-black text-slate-800 tracking-tighter font-mono"
+        className="type-clock text-slate-800 dark:text-white"
       >
         {formatTime(time)}
       </motion.div>
-      <div className="text-slate-500 font-medium mt-2 text-lg">
+      <div className="type-body text-slate-500 mt-2 dark:text-slate-400">
         {formatDate(time)}
       </div>
     </div>
