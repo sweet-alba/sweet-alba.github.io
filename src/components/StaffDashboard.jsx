@@ -74,9 +74,9 @@ export default function StaffDashboard({ currentUser, onLogout, attendances, onC
     <div className="min-h-screen bg-[#f8fafc] flex flex-col">
       <Navbar currentUser={currentUser} onLogout={onLogout} />
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 pt-10 pb-6 sm:pt-14 sm:pb-8 space-y-8">
         
-        <div className="sticky top-[72px] z-30 bg-[#f8fafc]/90 backdrop-blur-md pt-2 pb-6 -mx-4 px-4 sm:-mx-6 sm:px-6 space-y-6">
+        <div className="sticky top-16 sm:top-20 z-30 bg-[#f8fafc]/90 backdrop-blur-md pt-2 pb-6 -mx-4 px-4 sm:-mx-6 sm:px-6 space-y-6">
           <AnimatePresence>
             {overdueRecord && (
               <motion.div

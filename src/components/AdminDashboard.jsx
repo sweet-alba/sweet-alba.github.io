@@ -134,7 +134,7 @@ export default function AdminDashboard({ currentUser, onLogout, attendances, use
     <div className="min-h-screen bg-[#f8fafc] flex flex-col">
       <Navbar currentUser={currentUser} onLogout={onLogout} />
 
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 w-full space-y-8 sm:space-y-10">
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-6 sm:pt-16 sm:pb-10 w-full space-y-8 sm:space-y-10">
         <div className="flex space-x-1 bg-slate-200/50 p-1 rounded-2xl w-full sm:w-fit overflow-x-auto no-scrollbar">
           <button
             onClick={() => setActiveTab('attendance')}
@@ -279,12 +279,6 @@ export default function AdminDashboard({ currentUser, onLogout, attendances, use
       </main>
 
       <AttendanceDetailModal record={selectedRecord} onClose={() => setSelectedRecord(null)} />
-      <footer className="bg-white border-t border-slate-200 py-6 mt-auto">
-        <div className="max-w-7xl mx-auto px-6 flex justify-between items-center text-slate-400 text-xs font-bold uppercase tracking-widest">
-          <p>&copy; 2024 Sweet Alba Management</p>
-          <p>Internal Security & Logistics Division</p>
-        </div>
-      </footer>
     </div>
   );
 }
