@@ -5,6 +5,7 @@ import { Button, Card, Input } from './ui';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import Navbar from './Navbar';
+import BottomNav from './BottomNav';
 
 export default function AdminDashboard({ currentUser, onLogout, attendances, users = [], onUserAction, announcement, onUpdateAnnouncement }) {
   const [activeTab, setActiveTab] = useState('attendance'); // 'attendance', 'users', or 'trends'
@@ -131,40 +132,23 @@ export default function AdminDashboard({ currentUser, onLogout, attendances, use
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col">
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col pb-24">
       <Navbar currentUser={currentUser} onLogout={onLogout} />
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-6 sm:pt-16 sm:pb-10 w-full space-y-8 sm:space-y-10">
-        <div className="flex space-x-1 bg-slate-200/50 p-1 rounded-2xl w-full sm:w-fit overflow-x-auto no-scrollbar">
-          <button
-            onClick={() => setActiveTab('attendance')}
-            className={`px-6 py-3 rounded-xl text-xs font-black transition-all whitespace-nowrap ${activeTab === 'attendance' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            Absensi
-          </button>
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`px-6 py-3 rounded-xl text-xs font-black transition-all whitespace-nowrap ${activeTab === 'users' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            Petugas
-          </button>
-          <button
-            onClick={() => setActiveTab('trends')}
-            className={`px-6 py-3 rounded-xl text-xs font-black transition-all whitespace-nowrap ${activeTab === 'trends' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            Statistik Tren
-          </button>
-        </div>
 
-        {activeTab === 'trends' ? (
+        {activeTab === 'announcement' ? (
+          <AnnouncementSection 
+            announcement={announcement} 
+            onUpdateAnnouncement={onUpdateAnnouncement} 
+          />
+        ) : activeTab === 'trends' ? (
           <TrendsSection 
             attendances={filteredData} 
             summaryData={summaryData}
             setFilterType={setFilterType}
             filterType={filterType}
             setCurrentPage={setAttendancePage}
-            announcement={announcement} 
-            onUpdateAnnouncement={onUpdateAnnouncement}
             users={users}
             onUserAction={onUserAction}
           />
@@ -277,6 +261,8 @@ export default function AdminDashboard({ currentUser, onLogout, attendances, use
           />
         )}
       </main>
+
+      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
 
       <AttendanceDetailModal record={selectedRecord} onClose={() => setSelectedRecord(null)} />
     </div>
@@ -435,7 +421,7 @@ function AttendanceSection({ filteredData, paginatedAttendance, attendancePage, 
   );
 }
 
-function TrendsSection({ attendances, summaryData, setFilterType, filterType, setCurrentPage, announcement, onUpdateAnnouncement, users, onUserAction }) {
+function TrendsSection({ attendances, summaryData, setFilterType, filterType, setCurrentPage, users, onUserAction }) {
   const [localAnn, setLocalAnn] = useState(announcement || '');
   const [isSimulating, setIsSimulating] = useState(false);
 
@@ -555,55 +541,57 @@ function TrendsSection({ attendances, summaryData, setFilterType, filterType, se
     setIsSimulating(false);
   };
 
-  return (
-    <div className="space-y-8 pb-20 sm:pb-0">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <Card className="p-8 border-none bg-white shadow-xl lg:col-span-1 h-full">
-           <div className="flex items-center space-x-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center text-brand-600">
-                 <AlertTriangle size={20} />
-              </div>
-              <h3 className="font-black text-slate-900 tracking-tight">Broadcast Pengumuman</h3>
-           </div>
-           <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-4">Pesan ini akan muncul di dashboard petugas</p>
-           <textarea 
-              className="w-full h-32 p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-medium focus:ring-4 focus:ring-brand-500/10 outline-none resize-none mb-4"
-              placeholder="Tulis instruksi atau pengumuman hari ini..."
-              value={localAnn}
-              onChange={(e) => setLocalAnn(e.target.value)}
-           />
-           <Button className="w-full" onClick={() => onUpdateAnnouncement(localAnn)}>Update Pengumuman</Button>
-        </Card>
+function AnnouncementSection({ announcement, onUpdateAnnouncement }) {
+  const [localAnn, setLocalAnn] = useState(announcement || '');
 
-        <Card className="p-8 border-none bg-white shadow-xl lg:col-span-2 h-full">
-           <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-8">
-              <div className="flex items-center space-x-3">
-                 <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shadow-sm">
-                    <FileSpreadsheet size={20} />
-                 </div>
-                 <h3 className="font-black text-slate-900 tracking-tight">Tren Kehadiran (7 Hari Terakhir)</h3>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full xl:w-auto">
-                 <Button 
-                    variant="brand" 
-                    className="h-11 rounded-xl shadow-lg shadow-brand-500/10 px-6 font-black text-[10px] uppercase tracking-widest"
-                    onClick={handleGenerateDummy}
-                    disabled={isSimulating}
-                 >
-                    {isSimulating ? 'Memproses...' : 'Simulasi 7 Hari'}
-                 </Button>
-                 <Button 
-                    variant="secondary" 
-                    className="h-11 rounded-xl border-slate-100 bg-white px-6 font-black text-[10px] uppercase tracking-widest shadow-sm"
-                    onClick={handleSeedCleaner}
-                    disabled={isSimulating}
-                 >
-                    {isSimulating ? 'Memproses...' : 'Seed Cleaner (3bln)'}
-                 </Button>
-              </div>
+  return (
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="max-w-2xl mx-auto"
+    >
+      <Card className="p-8 border-none bg-white shadow-xl">
+        <div className="flex items-center space-x-3 mb-6">
+          <div className="w-12 h-12 rounded-2xl bg-brand-50 flex items-center justify-center text-brand-600 shadow-inner">
+            <Bell size={24} />
+          </div>
+          <div>
+            <h3 className="font-black text-slate-900 tracking-tight text-xl">Broadcast Pengumuman</h3>
+            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Pesan internal untuk seluruh petugas</p>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <textarea 
+            className="w-full h-48 p-6 bg-slate-50 border border-slate-100 rounded-[2rem] text-sm font-medium focus:ring-4 focus:ring-brand-500/10 outline-none resize-none transition-all"
+            placeholder="Tulis instruksi atau pengumuman hari ini yang akan muncul di dashboard petugas..."
+            value={localAnn}
+            onChange={(e) => setLocalAnn(e.target.value)}
+          />
+          
+          <Button 
+            className="w-full py-4 rounded-2xl font-black uppercase tracking-widest text-xs" 
+            onClick={() => onUpdateAnnouncement(localAnn)}
+          >
+            Update Pengumuman Sekarang
+          </Button>
+        </div>
+
+        <div className="mt-8 p-6 bg-amber-50 rounded-2xl border border-amber-100">
+           <div className="flex space-x-3 text-amber-800">
+              <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+              <p className="text-[10px] font-bold leading-relaxed uppercase tracking-wider">
+                Peringatan: Pengumuman ini akan langsung terlihat oleh semua staff saat mereka membuka dashboard masing-masing.
+              </p>
            </div>
-           
-           <div className="flex items-end justify-between h-72 gap-2 pt-10 px-2">
+        </div>
+      </Card>
+    </motion.div>
+  );
+}
+
+function TrendsSection({ attendances, summaryData, setFilterType, filterType, setCurrentPage, users, onUserAction }) {
+  const [isSimulating, setIsSimulating] = useState(false);
               {chartData.map((day, i) => {
                 const maxCount = Math.max(...chartData.map(d => d.count), 1);
                 const heightPercentage = (day.count / maxCount) * 100;
