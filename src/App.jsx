@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { signInAnonymously, onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, addDoc, orderBy, query, limit } from 'firebase/firestore';
 import { auth, db } from './lib/firebase';
@@ -14,6 +14,9 @@ import { buildClockInRecord } from './utils/attendance';
 const APP_ID = 'sweet-alba-absensi';
 const CLUSTER_LOCATION = { lat: -6.3854271, lng: 107.038834 }; // Sweet Alba Harvest City
 const MAX_RADIUS_METERS = 1000; // Jarak maksimal dalam meter
+const OUTSIDE_CONFIRMATION_BUFFER_METERS = 75;
+const LOCATION_REFRESH_INTERVAL_MS = 30000;
+const LOCATION_CACHE_TTL_MS = 45000;
 
 // Helper: Calculate distance between two coordinates in meters (Haversine formula)
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -31,7 +34,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-function getCurrentPosition() {
+function getCurrentPosition(options = {}) {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       reject(new Error('GPS tidak tersedia di perangkat ini.'));
@@ -42,12 +45,31 @@ function getCurrentPosition() {
       resolve,
       reject,
       {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
+        enableHighAccuracy: false,
+        timeout: 2500,
+        maximumAge: 30000,
+        ...options
       }
     );
   });
+}
+
+function getGeoErrorMessage(error, actionLabel) {
+  if (!error || typeof error.code !== 'number') {
+    return `${actionLabel} gagal memverifikasi lokasi. Pastikan GPS aktif dan izin lokasi diberikan.`;
+  }
+
+  if (error.code === 1) {
+    return `${actionLabel} memerlukan izin lokasi. Aktifkan permission lokasi browser lalu coba lagi.`;
+  }
+  if (error.code === 2) {
+    return `${actionLabel} belum bisa membaca lokasi. Coba pindah ke area dengan sinyal GPS lebih baik.`;
+  }
+  if (error.code === 3) {
+    return `${actionLabel} melebihi batas waktu cek lokasi. Coba ulangi dalam beberapa detik.`;
+  }
+
+  return `${actionLabel} gagal memverifikasi lokasi. Pastikan GPS aktif dan izin lokasi diberikan.`;
 }
 
 export default function App() {
@@ -61,6 +83,8 @@ export default function App() {
   const [firebaseUser, setFirebaseUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isVerifyingLocation, setIsVerifyingLocation] = useState(false);
+  const lastLocationRef = useRef(null);
   const [theme, setTheme] = useState(() => {
     const savedTheme = localStorage.getItem('absensi_theme');
     if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme;
@@ -79,12 +103,81 @@ export default function App() {
     setAlertConfig({ isOpen: true, title, message, variant });
   };
 
+  const saveLastLocation = (position) => {
+    lastLocationRef.current = {
+      lat: position.coords.latitude,
+      lng: position.coords.longitude,
+      accuracy: position.coords.accuracy,
+      timestamp: Date.now()
+    };
+  };
+
   const verifyClusterLocation = async (actionLabel) => {
+    setIsVerifyingLocation(true);
     try {
-      const position = await getCurrentPosition();
+      const cached = lastLocationRef.current;
+      const hasFreshCache = cached && (Date.now() - cached.timestamp) <= LOCATION_CACHE_TTL_MS;
+
+      if (hasFreshCache) {
+        const cachedDistance = calculateDistance(
+          cached.lat,
+          cached.lng,
+          CLUSTER_LOCATION.lat,
+          CLUSTER_LOCATION.lng
+        );
+        if (cachedDistance > (MAX_RADIUS_METERS + OUTSIDE_CONFIRMATION_BUFFER_METERS)) {
+          showAlert(
+            'Lokasi Tidak Sesuai',
+            `${actionLabel} wajib dilakukan di area cluster. Perkiraan jarak Anda sekitar ${Math.round(cachedDistance)}m dari titik cluster.`,
+            'danger'
+          );
+          return { ok: false };
+        }
+      }
+
+      let quickPosition;
+      try {
+        quickPosition = await getCurrentPosition({
+          enableHighAccuracy: false,
+          timeout: 2500,
+          maximumAge: 30000
+        });
+        saveLastLocation(quickPosition);
+      } catch {
+        quickPosition = null;
+      }
+
+      if (quickPosition) {
+        const quickLocation = {
+          lat: quickPosition.coords.latitude,
+          lng: quickPosition.coords.longitude
+        };
+        const quickDistance = calculateDistance(
+          quickLocation.lat,
+          quickLocation.lng,
+          CLUSTER_LOCATION.lat,
+          CLUSTER_LOCATION.lng
+        );
+
+        if (quickDistance > (MAX_RADIUS_METERS + OUTSIDE_CONFIRMATION_BUFFER_METERS)) {
+          showAlert(
+            'Lokasi Tidak Sesuai',
+            `${actionLabel} wajib dilakukan di area cluster. Anda saat ini berada sekitar ${Math.round(quickDistance)}m dari titik cluster yang ditentukan.`,
+            'danger'
+          );
+          return { ok: false };
+        }
+      }
+
+      const precisePosition = await getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 8000,
+        maximumAge: 0
+      });
+      saveLastLocation(precisePosition);
       const location = {
-        lat: position.coords.latitude,
-        lng: position.coords.longitude
+        lat: precisePosition.coords.latitude,
+        lng: precisePosition.coords.longitude
       };
 
       const distance = calculateDistance(
@@ -104,15 +197,47 @@ export default function App() {
       }
 
       return { ok: true, location };
-    } catch {
+    } catch (error) {
       showAlert(
         'GPS Tidak Tersedia',
-        `${actionLabel} wajib dilakukan di area cluster. Aktifkan GPS dan izinkan akses lokasi untuk melanjutkan.`,
+        getGeoErrorMessage(error, actionLabel),
         'danger'
       );
       return { ok: false };
+    } finally {
+      setIsVerifyingLocation(false);
     }
   };
+
+  useEffect(() => {
+    if (!currentUser || currentUser.role === 'admin') return;
+
+    let cancelled = false;
+    let timerId;
+
+    const warmLocation = async () => {
+      try {
+        const position = await getCurrentPosition({
+          enableHighAccuracy: false,
+          timeout: 2000,
+          maximumAge: 60000
+        });
+        if (!cancelled) {
+          saveLastLocation(position);
+        }
+      } catch {
+        // Silent fail: pre-warm hanya optimisasi UX
+      }
+    };
+
+    warmLocation();
+    timerId = window.setInterval(warmLocation, LOCATION_REFRESH_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      if (timerId) window.clearInterval(timerId);
+    };
+  }, [currentUser]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -347,10 +472,15 @@ export default function App() {
     sessionStorage.removeItem('absensi_user');
   };
 
-  const handleClockIn = async (shiftConfig) => {
+  const handleVerifyClockInLocation = async () => verifyClusterLocation('Absen Masuk');
+  const handleVerifyClockOutLocation = async () => verifyClusterLocation('Absen Pulang');
+
+  const handleClockIn = async (shiftConfig, preVerifiedLocation = null) => {
     if (!firebaseUser || !currentUser) return;
 
-    const locationCheck = await verifyClusterLocation('Absen Masuk');
+    const locationCheck = preVerifiedLocation
+      ? { ok: true, location: preVerifiedLocation }
+      : await verifyClusterLocation('Absen Masuk');
     if (!locationCheck.ok) return;
 
     const now = new Date();
@@ -370,10 +500,12 @@ export default function App() {
     }
   };
 
-  const handleClockOut = async (recordId) => {
+  const handleClockOut = async (recordId, preVerifiedLocation = null) => {
     if (!firebaseUser) return;
 
-    const locationCheck = await verifyClusterLocation('Absen Pulang');
+    const locationCheck = preVerifiedLocation
+      ? { ok: true, location: preVerifiedLocation }
+      : await verifyClusterLocation('Absen Pulang');
     if (!locationCheck.ok) {
       return;
     }
@@ -456,7 +588,10 @@ export default function App() {
           attendances={attendances}
           onClockIn={handleClockIn}
           onClockOut={handleClockOut}
+          onVerifyClockInLocation={handleVerifyClockInLocation}
+          onVerifyClockOutLocation={handleVerifyClockOutLocation}
           announcement={announcement}
+          isVerifyingLocation={isVerifyingLocation}
         />
       )}
 

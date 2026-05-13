@@ -11,7 +11,8 @@ export default function ActionSection({
   currentUser,
   handleActionClick,
   confirmShift,
-  activeDurationLabel
+  activeDurationLabel,
+  isVerifyingLocation = false
 }) {
   const formatShiftHour = (hour) => String(hour).padStart(2, '0');
   const shiftOptions = getShiftOptionsForRole(currentUser.role);
@@ -45,6 +46,7 @@ export default function ActionSection({
                       key={key}
                       variant="secondary"
                       onClick={() => confirmShift(key)}
+                      disabled={isVerifyingLocation}
                       className="h-16 rounded-3xl border-slate-100 group dark:border-white/10"
                     >
                       <div className="flex flex-col items-center">
@@ -60,6 +62,7 @@ export default function ActionSection({
                 type="button"
                 variant="ghost"
                 onClick={() => setShowShiftSelect(false)}
+                disabled={isVerifyingLocation}
                 className="mt-6 w-full"
               >
                 Batalkan
@@ -76,10 +79,11 @@ export default function ActionSection({
           >
             <button
               onClick={handleActionClick}
+              disabled={isVerifyingLocation}
               className={`group relative w-full max-w-[250px] sm:max-w-[280px] h-[250px] sm:h-[280px] mx-auto rounded-[2.75rem] transition-all duration-500 overflow-hidden shadow-sm ${activeRecord
                 ? 'bg-rose-500 hover:bg-rose-600 shadow-rose-200 dark:shadow-rose-950/40'
                 : 'bg-brand-600 hover:bg-brand-700 shadow-brand-200 dark:shadow-brand-950/40'
-                }`}
+                } ${isVerifyingLocation ? 'opacity-80 cursor-not-allowed' : ''}`}
             >
               <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className="relative flex h-full flex-col items-center justify-center p-6 space-y-3">
@@ -93,6 +97,9 @@ export default function ActionSection({
                   <h2 className="type-page-title text-white uppercase italic">
                     {activeRecord ? 'CLOCK OUT' : 'CLOCK IN'}
                   </h2>
+                  {isVerifyingLocation && (
+                    <p className="type-overline text-white/80 mt-1">Memverifikasi lokasi...</p>
+                  )}
                 </div>
                 {activeRecord && (
                   <div className="text-center backdrop-blur-md">

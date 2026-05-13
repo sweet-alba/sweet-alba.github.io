@@ -13,18 +13,35 @@ import { formatDuration, getRecordDate } from '../../../utils/dateUtils';
 // Modular Components
 import AttendanceDetailModal from '../shared/AttendanceDetailModal';
 import StaffPeriodBottomSheet from './modals/StaffPeriodBottomSheet';
+import ClockOutConfirmBottomSheet from './modals/ClockOutConfirmBottomSheet';
 import ActionSection from './sections/ActionSection';
 import PersonalStats from './sections/PersonalStats';
 import AttendanceHistorySection from './sections/AttendanceHistorySection';
 import { registerNotificationToken } from '../../../lib/notifications';
 import { BellRing } from 'lucide-react';
 
-export default function StaffDashboard({ currentUser, onLogout, theme, onThemeToggle, attendances, onClockIn, onClockOut, announcement }) {
+export default function StaffDashboard({
+  currentUser,
+  onLogout,
+  theme,
+  onThemeToggle,
+  attendances,
+  onClockIn,
+  onClockOut,
+  onVerifyClockInLocation,
+  onVerifyClockOutLocation,
+  announcement,
+  isVerifyingLocation = false
+}) {
   const [activeTab, setActiveTab] = useState('attendance');
   const [showShiftSelect, setShowShiftSelect] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [periodSheetOpen, setPeriodSheetOpen] = useState(false);
+  const [clockOutSheetOpen, setClockOutSheetOpen] = useState(false);
+  const [isSubmittingClockOut, setIsSubmittingClockOut] = useState(false);
+  const [verifiedClockInLocation, setVerifiedClockInLocation] = useState(null);
+  const [pendingClockOut, setPendingClockOut] = useState(null);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [notificationPermission, setNotificationPermission] = useState(
@@ -65,17 +82,57 @@ export default function StaffDashboard({ currentUser, onLogout, theme, onThemeTo
     ? formatDuration(durationTick - activeCheckInDate.getTime())
     : 'Menghitung...';
 
-  const handleActionClick = () => {
+  const beginClockOutFlow = async (recordId) => {
+    const locationCheck = await onVerifyClockOutLocation();
+    if (!locationCheck?.ok) return;
+
+    setPendingClockOut({
+      recordId,
+      location: locationCheck.location
+    });
+    setClockOutSheetOpen(true);
+  };
+
+  const handleActionClick = async () => {
     if (activeRecord) {
-      onClockOut(activeRecord.id);
+      await beginClockOutFlow(activeRecord.id);
     } else {
+      const locationCheck = await onVerifyClockInLocation();
+      if (!locationCheck?.ok) return;
+
+      setVerifiedClockInLocation(locationCheck.location);
       setShowShiftSelect(true);
     }
   };
 
   const confirmShift = (shiftKey) => {
-    onClockIn(SHIFTS[shiftKey]);
+    onClockIn(SHIFTS[shiftKey], verifiedClockInLocation);
+    setVerifiedClockInLocation(null);
     setShowShiftSelect(false);
+  };
+
+  const closeShiftSelect = () => {
+    setShowShiftSelect(false);
+    setVerifiedClockInLocation(null);
+  };
+
+  const closeClockOutSheet = () => {
+    if (isSubmittingClockOut) return;
+    setClockOutSheetOpen(false);
+    setPendingClockOut(null);
+  };
+
+  const confirmClockOut = async () => {
+    if (!pendingClockOut) return;
+
+    setIsSubmittingClockOut(true);
+    try {
+      await onClockOut(pendingClockOut.recordId, pendingClockOut.location);
+      setClockOutSheetOpen(false);
+      setPendingClockOut(null);
+    } finally {
+      setIsSubmittingClockOut(false);
+    }
   };
 
   const handleRequestPermission = async () => {
@@ -99,11 +156,12 @@ export default function StaffDashboard({ currentUser, onLogout, theme, onThemeTo
               activeRecord={activeRecord}
               alreadyCompletedToday={alreadyCompletedToday}
               showShiftSelect={showShiftSelect}
-              setShowShiftSelect={setShowShiftSelect}
+              setShowShiftSelect={closeShiftSelect}
               currentUser={currentUser}
               handleActionClick={handleActionClick}
               confirmShift={confirmShift}
               activeDurationLabel={activeDurationLabel}
+              isVerifyingLocation={isVerifyingLocation}
             />
             <PersonalStats myRecords={myRecords} />
           </div>
@@ -185,8 +243,13 @@ export default function StaffDashboard({ currentUser, onLogout, theme, onThemeTo
                         </p>
                       </div>
                     </div>
-                    <Button variant="danger" onClick={() => onClockOut(overdueRecord.id)} className="w-full sm:w-auto bg-rose-600 shadow-none">
-                      Selesaikan Shift Lama
+                    <Button
+                      variant="danger"
+                      onClick={() => beginClockOutFlow(overdueRecord.id)}
+                      className="w-full sm:w-auto bg-rose-600 shadow-none"
+                      disabled={isVerifyingLocation}
+                    >
+                      {isVerifyingLocation ? 'Memverifikasi lokasi...' : 'Selesaikan Shift Lama'}
                     </Button>
                   </div>
                 </Card>
@@ -236,6 +299,13 @@ export default function StaffDashboard({ currentUser, onLogout, theme, onThemeTo
           setCurrentPage(1);
           setPeriodSheetOpen(false);
         }}
+      />
+
+      <ClockOutConfirmBottomSheet
+        open={clockOutSheetOpen}
+        onClose={closeClockOutSheet}
+        onConfirm={confirmClockOut}
+        isSubmitting={isSubmittingClockOut}
       />
 
     </div>
