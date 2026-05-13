@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp } from 'lucide-react';
 import { Card } from '../../../ui';
+import { formatMinutesAdaptive } from '../../../../utils/dateUtils';
 
 export default function TrendsSection({ attendances }) {
   // Calculate chart data (last 7 days)
@@ -262,7 +263,7 @@ export default function TrendsSection({ attendances }) {
                 </div>
                 <div>
                   <p className="type-body font-bold text-slate-900 dark:text-white">
-                    {chartSummary.totalLateMinutes.toLocaleString('id-ID')} menit total keterlambatan
+                    {formatMinutesAdaptive(chartSummary.totalLateMinutes)} total keterlambatan
                   </p>
                   <p className="type-caption text-slate-500 dark:text-slate-400">Akumulasi keterlambatan dari seluruh record pada rentang ini.</p>
                 </div>

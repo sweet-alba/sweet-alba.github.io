@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Users } from 'lucide-react';
 import { Button } from '../../../ui';
+import { formatMinutesAdaptive } from '../../../../utils/dateUtils';
 
 export default function AttendanceSection({
   attendances,
@@ -25,7 +26,10 @@ export default function AttendanceSection({
         const matchesSearch = a.userName.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesUser = selectedUserFilter === 'all' || a.userId === selectedUserFilter;
         const matchesRole = filterRole === 'all' || a.role === filterRole;
-        const matchesType = filterType === 'all' || (filterType === 'late' ? a.latenessMins > 0 : a.latenessMins === 0);
+        const matchesType = filterType === 'all'
+          || (filterType === 'late' && a.latenessMins > 0)
+          || (filterType === 'ontime' && a.latenessMins === 0)
+          || (filterType === 'active' && !a.checkOut);
 
         return matchesPeriod && matchesSearch && matchesUser && matchesRole && matchesType;
       })
@@ -49,6 +53,7 @@ export default function AttendanceSection({
         {paginatedAttendance.length > 0 ? (
           paginatedAttendance.map((record, index) => {
             const isLate = record.latenessMins > 0;
+            const isActive = !record.checkOut;
             return (
               <motion.div
                 key={record.id || index}
@@ -82,7 +87,7 @@ export default function AttendanceSection({
                   <div className="text-right">
                     {isLate ? (
                       <span className="px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-500 text-[10px] font-bold">
-                        TERLAMBAT {record.latenessMins}M
+                        TERLAMBAT {formatMinutesAdaptive(record.latenessMins, { short: true }).toUpperCase()}
                       </span>
                     ) : (
                       <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[10px] font-bold">
@@ -90,7 +95,11 @@ export default function AttendanceSection({
                       </span>
                     )}
                   </div>
-                  {record.checkOut && (
+                  {isActive ? (
+                    <span className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-600 text-[10px] font-bold">
+                      SEDANG AKTIF
+                    </span>
+                  ) : (
                     <span className="type-overline text-slate-400 dark:text-slate-600 italic">Selesai</span>
                   )}
                 </div>

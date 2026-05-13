@@ -32,3 +32,24 @@ export function formatDuration(milliseconds) {
   if (hours > 0) return `${hours}j ${minutes}m`;
   return `${minutes}m ${seconds}d`;
 }
+
+export function formatMinutesAdaptive(minutes, { short = false } = {}) {
+  if (!Number.isFinite(minutes) || minutes <= 0) {
+    return short ? '0m' : '0 menit';
+  }
+
+  if (minutes < 60) {
+    return short ? `${minutes}m` : `${minutes} menit`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  if (short) {
+    return remainingMinutes > 0 ? `${hours}j ${remainingMinutes}m` : `${hours}j`;
+  }
+
+  return remainingMinutes > 0
+    ? `${hours} jam ${remainingMinutes} menit`
+    : `${hours} jam`;
+}

@@ -27,40 +27,47 @@ export default function Navbar({ currentUser, onLogout, theme, onThemeToggle }) 
   useEffect(() => {
     if (!navigator.geolocation) return;
     let isMounted = true;
+    let timerId;
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        const coordinateLabel = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+    const refreshLocation = () => {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          const coordinateLabel = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
 
-        try {
-          const params = new URLSearchParams({
-            latitude: String(latitude),
-            longitude: String(longitude),
-            localityLanguage: 'id'
-          });
-          const response = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?${params}`);
-          if (!response.ok) throw new Error('Reverse geocode failed');
+          try {
+            const params = new URLSearchParams({
+              latitude: String(latitude),
+              longitude: String(longitude),
+              localityLanguage: 'id'
+            });
+            const response = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?${params}`);
+            if (!response.ok) throw new Error('Reverse geocode failed');
 
-          const data = await response.json();
-          const locationName = formatLocationName(data);
-          if (isMounted) setLocationLabel(locationName || coordinateLabel);
-        } catch {
-          if (isMounted) setLocationLabel(coordinateLabel);
+            const data = await response.json();
+            const locationName = formatLocationName(data);
+            if (isMounted) setLocationLabel(locationName || coordinateLabel);
+          } catch {
+            if (isMounted) setLocationLabel(coordinateLabel);
+          }
+        },
+        () => {
+          if (isMounted) setLocationLabel('Lokasi belum aktif');
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 8000,
+          maximumAge: 0
         }
-      },
-      () => {
-        if (isMounted) setLocationLabel('Lokasi belum aktif');
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 8000,
-        maximumAge: 60000
-      }
-    );
+      );
+    };
+
+    refreshLocation();
+    timerId = setInterval(refreshLocation, 30000);
 
     return () => {
       isMounted = false;
+      if (timerId) clearInterval(timerId);
     };
   }, []);
 

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { X, MapPin } from 'lucide-react';
 import { Button } from '../../ui';
+import { formatMinutesAdaptive } from '../../../utils/dateUtils';
 
 export default function AttendanceDetailModal({ record, onClose }) {
   if (!record) return null;
@@ -10,9 +11,7 @@ export default function AttendanceDetailModal({ record, onClose }) {
 
   const formatDuration = (mins) => {
     if (mins === null) return '--';
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    return `${h} Jam ${m} Menit`;
+    return formatMinutesAdaptive(mins);
   };
 
   return (
@@ -87,7 +86,7 @@ export default function AttendanceDetailModal({ record, onClose }) {
             <div className="flex justify-between items-center py-4 border-b border-slate-100 dark:border-white/10">
               <span className="type-body text-slate-500">Status Kehadiran</span>
               {record.latenessMins > 0 ? (
-                <span className="type-body text-rose-600 font-bold uppercase">Terlambat {record.latenessMins} Menit</span>
+                <span className="type-body text-rose-600 font-bold uppercase">Terlambat {formatMinutesAdaptive(record.latenessMins)}</span>
               ) : (
                 <span className="type-body text-emerald-600 font-bold uppercase">Tepat Waktu</span>
               )}

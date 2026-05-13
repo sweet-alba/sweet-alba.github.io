@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, ChevronRight, MapPin } from 'lucide-react';
 import { Button, Card } from '../../../ui';
-import { MONTHS_ID, getRecordDate } from '../../../../utils/dateUtils';
+import { MONTHS_ID, getRecordDate, formatMinutesAdaptive } from '../../../../utils/dateUtils';
 
 export default function AttendanceHistorySection({
   myRecords,
@@ -105,7 +105,7 @@ export default function AttendanceHistorySection({
                         {record.latenessMins > 0 ? (
                           <div className="flex items-center space-x-2">
                             <span className="px-2 py-1 rounded-lg type-overline bg-rose-100 text-rose-600">Terlambat</span>
-                            <span className="type-caption font-bold text-rose-600">{record.latenessMins}m</span>
+                            <span className="type-caption font-bold text-rose-600">{formatMinutesAdaptive(record.latenessMins, { short: true })}</span>
                           </div>
                         ) : (
                           <span className="px-2 py-1 rounded-lg type-overline bg-emerald-100 text-emerald-600">Tepat Waktu</span>

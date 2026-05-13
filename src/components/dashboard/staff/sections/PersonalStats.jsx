@@ -2,18 +2,17 @@ import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, AlertCircle, Timer, CheckCircle } from 'lucide-react';
 import { Card } from '../../../ui';
+import { formatMinutesAdaptive } from '../../../../utils/dateUtils';
 
 export default function PersonalStats({ myRecords }) {
   const personalStats = useMemo(() => {
     const lateRecords = myRecords.filter(a => a.latenessMins > 0);
     const onTimeRecords = myRecords.filter(a => !a.latenessMins || a.latenessMins <= 0);
     const totalLateMins = myRecords.reduce((acc, curr) => acc + (curr.latenessMins || 0), 0);
-    const lateHours = Math.floor(totalLateMins / 60);
-    const lateMins = totalLateMins % 60;
     return {
       total: myRecords.length,
       lateCount: lateRecords.length,
-      totalLateTime: `${lateHours}j ${lateMins}m`,
+      totalLateTime: formatMinutesAdaptive(totalLateMins, { short: true }),
       onTimeCount: onTimeRecords.length
     };
   }, [myRecords]);

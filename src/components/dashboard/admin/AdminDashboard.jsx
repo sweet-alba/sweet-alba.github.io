@@ -41,7 +41,7 @@ export default function AdminDashboard({
   const [filterSheet, setFilterSheet] = useState(null); // 'user' or 'role'
   const [selectedUserFilter, setSelectedUserFilter] = useState('all');
   const [filterRole, setFilterRole] = useState('all');
-  const [filterType, setFilterType] = useState('all'); // 'all', 'late', 'ontime'
+  const [filterType, setFilterType] = useState('all'); // 'all', 'late', 'ontime', 'active'
 
   // Modal States
   const [selectedRecord, setSelectedRecord] = useState(null);
@@ -145,13 +145,13 @@ export default function AdminDashboard({
                   </button>
 
                   <div className="flex flex-1 items-center bg-white p-1.5 rounded-2xl border border-slate-200 dark:bg-slate-900 dark:border-white/5 w-full">
-                    {['all', 'late', 'ontime'].map(type => (
+                    {['all', 'late', 'ontime', 'active'].map(type => (
                       <button
                         key={type}
                         onClick={() => { setFilterType(type); setAttendancePage(1); }}
                         className={`flex-1 py-2 px-1 rounded-xl type-overline transition-all uppercase text-[9px] leading-tight ${filterType === type ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950' : 'text-slate-400'}`}
                       >
-                        {type === 'all' ? 'Semua' : type === 'late' ? 'Telat' : 'Tepat'}
+                        {type === 'all' ? 'Semua' : type === 'late' ? 'Telat' : type === 'ontime' ? 'Tepat' : 'Aktif'}
                       </button>
                     ))}
                   </div>
