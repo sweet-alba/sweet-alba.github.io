@@ -12,7 +12,8 @@ const MAX_RADIUS_METERS = 1000;
 const SHIFTS = {
   sec1: { role: 'security', name: 'Shift 1 (08:00 - 20:00)', expectedInHour: 8, expectedInMinute: 0 },
   sec2: { role: 'security', name: 'Shift 2 (20:00 - 08:00)', expectedInHour: 20, expectedInMinute: 0 },
-  cln1: { role: 'cleaner', name: 'Shift Pagi (09:00 - 16:00)', expectedInHour: 9, expectedInMinute: 0 }
+  cln1: { role: 'cleaner', name: 'Shift 1 (08:00 - 20:00)', expectedInHour: 8, expectedInMinute: 0 },
+  cln2: { role: 'cleaner', name: 'Shift 2 (20:00 - 08:00)', expectedInHour: 20, expectedInMinute: 0 }
 };
 
 function getDistanceMeters(lat1, lon1, lat2, lon2) {

@@ -10,6 +10,12 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+coverage
+.vite
+.firebase
+firebase-debug.log*
+.eslintcache
+.pnpm-store
 .env
 .env.*
 !.env.example

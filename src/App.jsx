@@ -8,6 +8,7 @@ import { Button, AlertModal } from './components/ui';
 import LoginScreen from './components/LoginScreen';
 import StaffDashboard from './components/dashboard/staff/StaffDashboard';
 import AdminDashboard from './components/dashboard/admin/AdminDashboard';
+import { buildClockInRecord } from './utils/attendance';
 
 // App configuration
 const APP_ID = 'sweet-alba-absensi';
@@ -28,6 +29,25 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return R * c;
+}
+
+function getCurrentPosition() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('GPS tidak tersedia di perangkat ini.'));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      resolve,
+      reject,
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  });
 }
 
 export default function App() {
@@ -57,6 +77,41 @@ export default function App() {
 
   const showAlert = (title, message, variant = 'warning') => {
     setAlertConfig({ isOpen: true, title, message, variant });
+  };
+
+  const verifyClusterLocation = async (actionLabel) => {
+    try {
+      const position = await getCurrentPosition();
+      const location = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+      };
+
+      const distance = calculateDistance(
+        location.lat,
+        location.lng,
+        CLUSTER_LOCATION.lat,
+        CLUSTER_LOCATION.lng
+      );
+
+      if (distance > MAX_RADIUS_METERS) {
+        showAlert(
+          'Lokasi Tidak Sesuai',
+          `${actionLabel} wajib dilakukan di area cluster. Anda saat ini berada sekitar ${Math.round(distance)}m dari titik cluster yang ditentukan.`,
+          'danger'
+        );
+        return { ok: false };
+      }
+
+      return { ok: true, location };
+    } catch {
+      showAlert(
+        'GPS Tidak Tersedia',
+        `${actionLabel} wajib dilakukan di area cluster. Aktifkan GPS dan izinkan akses lokasi untuk melanjutkan.`,
+        'danger'
+      );
+      return { ok: false };
+    }
   };
 
   useEffect(() => {
@@ -151,7 +206,7 @@ export default function App() {
       if (Notification.permission === 'granted' && notification.title) {
         new Notification(notification.title, {
           body: notification.body,
-          icon: '/vite.svg'
+          icon: '/logo-sweet-alba.svg'
         });
       }
     }).then((listener) => {
@@ -194,15 +249,15 @@ export default function App() {
             navigator.serviceWorker.ready.then(registration => {
               registration.showNotification('Pengumuman Baru', {
                 body: log.text,
-                icon: '/vite.svg',
-                badge: '/vite.svg',
+                icon: '/logo-sweet-alba.svg',
+                badge: '/logo-sweet-alba.svg',
                 tag: 'announcement',
                 renotify: true
               });
             }).catch(() => {
               new Notification('Pengumuman Baru', {
                 body: log.text,
-                icon: '/vite.svg',
+                icon: '/logo-sweet-alba.svg',
                 tag: 'announcement'
               });
             });
@@ -284,7 +339,9 @@ export default function App() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (!currentUser) return;
+
     signOut(auth).catch((err) => console.warn('Sign out error:', err));
     setCurrentUser(null);
     sessionStorage.removeItem('absensi_user');
@@ -293,67 +350,15 @@ export default function App() {
   const handleClockIn = async (shiftConfig) => {
     if (!firebaseUser || !currentUser) return;
 
+    const locationCheck = await verifyClusterLocation('Absen Masuk');
+    if (!locationCheck.ok) return;
+
     const now = new Date();
-
-    // 1. Check Geolocation & Geofence
-    let location;
-    try {
-      const pos = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000
-        });
-      });
-      location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-
-      // 2. Geofence Check
-      const distance = calculateDistance(
-        location.lat,
-        location.lng,
-        CLUSTER_LOCATION.lat,
-        CLUSTER_LOCATION.lng
-      );
-
-      if (distance > MAX_RADIUS_METERS) {
-        showAlert(
-          "Diluar Jangkauan", 
-          `Anda berada ${Math.round(distance)}m dari Cluster. Maksimal radius adalah ${MAX_RADIUS_METERS}m.`,
-          'danger'
-        );
-        return;
-      }
-    } catch (err) {
-      console.warn('Geolocation error:', err);
-      showAlert(
-        "Lokasi Tidak Ditemukan",
-        "Pastikan GPS aktif dan izinkan akses lokasi untuk melakukan absensi.",
-        'danger'
-      );
-      return;
-    }
-
-    const expectedTime = new Date(now);
-    expectedTime.setHours(shiftConfig.expectedInHour, shiftConfig.expectedInMinute, 0, 0);
-
-    let lateness = 0;
-    const diffMs = now.getTime() - expectedTime.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-
-    if (diffMins > 0) {
-      lateness = diffMins;
-    }
 
     const newRecordId = Date.now().toString();
     const newRecord = {
-      userId: currentUser.id,
-      userName: currentUser.name,
-      role: currentUser.role,
-      shift: shiftConfig.name,
-      date: now.toLocaleDateString('id-ID'),
+      ...buildClockInRecord({ currentUser, shiftConfig, now, locationIn: locationCheck.location }),
       checkIn: serverTimestamp(),
-      checkOut: null,
-      latenessMins: lateness,
-      locationIn: location,
     };
 
     const docRef = doc(db, 'apps', APP_ID, 'attendances', newRecordId);
@@ -368,36 +373,12 @@ export default function App() {
   const handleClockOut = async (recordId) => {
     if (!firebaseUser) return;
 
-    let location;
-    try {
-      const pos = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000
-        });
-      });
-      location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-
-      // Geofence Check for Clock Out
-      const distance = calculateDistance(
-        location.lat,
-        location.lng,
-        CLUSTER_LOCATION.lat,
-        CLUSTER_LOCATION.lng
-      );
-
-      if (distance > MAX_RADIUS_METERS) {
-        showAlert(
-          "Diluar Jangkauan",
-          `Anda berada ${Math.round(distance)}m dari Cluster. Anda harus berada di area cluster untuk mengakhiri shift.`,
-          'danger'
-        );
-        return;
-      }
-    } catch {
-      showAlert("Lokasi Tidak Ditemukan", "Gagal memverifikasi lokasi. Pastikan GPS aktif.", 'danger');
+    const locationCheck = await verifyClusterLocation('Absen Pulang');
+    if (!locationCheck.ok) {
       return;
     }
+
+    const location = locationCheck.location;
 
     const docRef = doc(db, 'apps', APP_ID, 'attendances', recordId);
     try {

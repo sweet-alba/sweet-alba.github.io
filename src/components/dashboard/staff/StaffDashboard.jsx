@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Clock, Timer, AlertTriangle } from 'lucide-react';
+import { Clock, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button, Card } from '../../ui';
 import DigitalClock from '../../Clock';
@@ -37,7 +37,7 @@ export default function StaffDashboard({ currentUser, onLogout, theme, onThemeTo
   const overdueRecord = myRecords.find(r => r.date !== todayStr && !r.checkOut);
   const alreadyCompletedToday = myRecords.find(r => r.date === todayStr && r.checkOut);
   const activeCheckInDate = getRecordDate(activeRecord);
-  const [durationTick, setDurationTick] = useState(Date.now());
+  const [durationTick, setDurationTick] = useState(() => Date.now());
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -59,7 +59,7 @@ export default function StaffDashboard({ currentUser, onLogout, theme, onThemeTo
         timerRef.current = null;
       }
     };
-  }, [activeRecord?.id]);
+  }, [activeRecord]);
 
   const activeDurationLabel = activeCheckInDate
     ? formatDuration(durationTick - activeCheckInDate.getTime())
@@ -69,11 +69,7 @@ export default function StaffDashboard({ currentUser, onLogout, theme, onThemeTo
     if (activeRecord) {
       onClockOut(activeRecord.id);
     } else {
-      if (currentUser.role === 'security') {
-        setShowShiftSelect(true);
-      } else {
-        onClockIn(SHIFTS.CLEANER);
-      }
+      setShowShiftSelect(true);
     }
   };
 
@@ -91,29 +87,6 @@ export default function StaffDashboard({ currentUser, onLogout, theme, onThemeTo
       }
     } catch (err) {
       console.error("Gagal meminta izin notifikasi:", err);
-    }
-  };
-
-  const triggerTestNotification = () => {
-    console.log("🛠️ Mencoba memicu NOTIFIKASI TEST...");
-    alert("Mencoba memicu notifikasi... Klik OK dan lihat apakah popup muncul di pojok layar.");
-    
-    if (Notification.permission === 'granted') {
-      navigator.serviceWorker.ready.then(registration => {
-        registration.showNotification('Tes Notifikasi', {
-          body: 'Ini adalah pesan percobaan untuk memastikan notifikasi Anda aktif.',
-          icon: '/vite.svg',
-          badge: '/vite.svg',
-          tag: 'test-notif'
-        });
-      }).catch(() => {
-        new Notification('Tes Notifikasi', {
-          body: 'Ini adalah pesan percobaan (fallback) untuk memastikan notifikasi Anda aktif.',
-          icon: '/vite.svg'
-        });
-      });
-    } else {
-      handleRequestPermission();
     }
   };
 
@@ -154,21 +127,11 @@ export default function StaffDashboard({ currentUser, onLogout, theme, onThemeTo
                     <AlertTriangle size={140} />
                   </div>
                 </Card>
-                <div className="mt-4 px-2">
-                  <Button variant="secondary" onClick={triggerTestNotification} className="w-full h-12 rounded-2xl text-slate-500 text-xs">
-                    <BellRing size={16} className="mr-2" />
-                    Test Notifikasi
-                  </Button>
-                </div>
               </motion.div>
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-slate-400">
                 <AlertTriangle size={48} className="opacity-20 mb-4" />
-                <p className="type-overline mb-6">Belum ada pengumuman hari ini</p>
-                <Button variant="secondary" onClick={triggerTestNotification} className="rounded-2xl h-12 px-6 text-xs">
-                  <BellRing size={16} className="mr-2" />
-                  Test Notifikasi
-                </Button>
+                <p className="type-overline">Belum ada pengumuman hari ini</p>
               </div>
             )}
           </AnimatePresence>

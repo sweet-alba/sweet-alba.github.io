@@ -20,8 +20,8 @@ messaging.onBackgroundMessage((payload) => {
 
   self.registration.showNotification(notification.title || 'Pengumuman Baru', {
     body: notification.body || 'Ada pengumuman baru dari admin.',
-    icon: '/vite.svg',
-    badge: '/vite.svg',
+    icon: '/logo-sweet-alba.svg',
+    badge: '/logo-sweet-alba.svg',
     data: {
       url: data.url || '/'
     }

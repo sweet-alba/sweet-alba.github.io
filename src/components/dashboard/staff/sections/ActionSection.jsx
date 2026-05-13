@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, Timer, MapPin } from 'lucide-react';
 import { Button, Card } from '../../../ui';
-import { SHIFTS } from '../../../../constants';
+import { getShiftOptionsForRole } from '../../../../utils/attendance';
 
 export default function ActionSection({
   activeRecord,
@@ -14,6 +14,7 @@ export default function ActionSection({
   activeDurationLabel
 }) {
   const formatShiftHour = (hour) => String(hour).padStart(2, '0');
+  const shiftOptions = getShiftOptionsForRole(currentUser.role);
 
   return (
     <div className="relative flex w-full justify-center">
@@ -39,9 +40,7 @@ export default function ActionSection({
             <Card className="p-8 border-brand-100 bg-brand-50/30 rounded-[2.5rem] dark:border-brand-500/20 dark:bg-brand-950/20">
               <h3 className="type-card-title text-slate-800 mb-8 dark:text-white">Pilih Shift Hari Ini</h3>
               <div className="grid gap-4">
-                {Object.keys(SHIFTS)
-                  .filter(key => key.startsWith(currentUser.role.toUpperCase()))
-                  .map((key) => (
+                {shiftOptions.map(({ key, name, expectedInHour, expectedOutHour }) => (
                     <Button
                       key={key}
                       variant="secondary"
@@ -49,9 +48,9 @@ export default function ActionSection({
                       className="h-16 rounded-3xl border-slate-100 group dark:border-white/10"
                     >
                       <div className="flex flex-col items-center">
-                        <span className="type-body font-bold text-slate-800 group-hover:text-brand-600 uppercase dark:text-slate-100 dark:group-hover:text-brand-400">{SHIFTS[key].name}</span>
+                        <span className="type-body font-bold text-slate-800 group-hover:text-brand-600 uppercase dark:text-slate-100 dark:group-hover:text-brand-400">{name}</span>
                         <span className="type-overline text-slate-400 mt-1 dark:text-slate-500">
-                          {formatShiftHour(SHIFTS[key].expectedInHour)}:00 - {formatShiftHour(SHIFTS[key].expectedOutHour)}:00
+                          {formatShiftHour(expectedInHour)}:00 - {formatShiftHour(expectedOutHour)}:00
                         </span>
                       </div>
                     </Button>

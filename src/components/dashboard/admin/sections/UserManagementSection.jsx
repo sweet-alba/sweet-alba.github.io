@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { UserPlus, Settings, Edit2, Trash2 } from 'lucide-react';
 import { Card, Button } from '../../../ui';
