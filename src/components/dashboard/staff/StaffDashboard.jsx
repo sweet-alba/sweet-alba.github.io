@@ -16,6 +16,8 @@ import StaffPeriodBottomSheet from './modals/StaffPeriodBottomSheet';
 import ActionSection from './sections/ActionSection';
 import PersonalStats from './sections/PersonalStats';
 import AttendanceHistorySection from './sections/AttendanceHistorySection';
+import { registerNotificationToken } from '../../../lib/notifications';
+import { BellRing } from 'lucide-react';
 
 export default function StaffDashboard({ currentUser, onLogout, theme, onThemeToggle, attendances, onClockIn, onClockOut, announcement }) {
   const [activeTab, setActiveTab] = useState('attendance');
@@ -25,6 +27,9 @@ export default function StaffDashboard({ currentUser, onLogout, theme, onThemeTo
   const [periodSheetOpen, setPeriodSheetOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [notificationPermission, setNotificationPermission] = useState(
+    typeof window !== 'undefined' ? Notification.permission : 'default'
+  );
 
   const myRecords = attendances.filter(r => r.userId === currentUser.id);
   const todayStr = new Date().toLocaleDateString('id-ID');
@@ -77,6 +82,41 @@ export default function StaffDashboard({ currentUser, onLogout, theme, onThemeTo
     setShowShiftSelect(false);
   };
 
+  const handleRequestPermission = async () => {
+    try {
+      const result = await Notification.requestPermission();
+      setNotificationPermission(result);
+      if (result === 'granted') {
+        registerNotificationToken(currentUser);
+      }
+    } catch (err) {
+      console.error("Gagal meminta izin notifikasi:", err);
+    }
+  };
+
+  const triggerTestNotification = () => {
+    console.log("🛠️ Mencoba memicu NOTIFIKASI TEST...");
+    alert("Mencoba memicu notifikasi... Klik OK dan lihat apakah popup muncul di pojok layar.");
+    
+    if (Notification.permission === 'granted') {
+      navigator.serviceWorker.ready.then(registration => {
+        registration.showNotification('Tes Notifikasi', {
+          body: 'Ini adalah pesan percobaan untuk memastikan notifikasi Anda aktif.',
+          icon: '/vite.svg',
+          badge: '/vite.svg',
+          tag: 'test-notif'
+        });
+      }).catch(() => {
+        new Notification('Tes Notifikasi', {
+          body: 'Ini adalah pesan percobaan (fallback) untuk memastikan notifikasi Anda aktif.',
+          icon: '/vite.svg'
+        });
+      });
+    } else {
+      handleRequestPermission();
+    }
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'attendance':
@@ -114,11 +154,21 @@ export default function StaffDashboard({ currentUser, onLogout, theme, onThemeTo
                     <AlertTriangle size={140} />
                   </div>
                 </Card>
+                <div className="mt-4 px-2">
+                  <Button variant="secondary" onClick={triggerTestNotification} className="w-full h-12 rounded-2xl text-slate-500 text-xs">
+                    <BellRing size={16} className="mr-2" />
+                    Test Notifikasi
+                  </Button>
+                </div>
               </motion.div>
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-slate-400">
                 <AlertTriangle size={48} className="opacity-20 mb-4" />
-                <p className="type-overline">Belum ada pengumuman hari ini</p>
+                <p className="type-overline mb-6">Belum ada pengumuman hari ini</p>
+                <Button variant="secondary" onClick={triggerTestNotification} className="rounded-2xl h-12 px-6 text-xs">
+                  <BellRing size={16} className="mr-2" />
+                  Test Notifikasi
+                </Button>
               </div>
             )}
           </AnimatePresence>
@@ -174,6 +224,28 @@ export default function StaffDashboard({ currentUser, onLogout, theme, onThemeTo
                     </div>
                     <Button variant="danger" onClick={() => onClockOut(overdueRecord.id)} className="w-full sm:w-auto bg-rose-600 shadow-none">
                       Selesaikan Shift Lama
+                    </Button>
+                  </div>
+                </Card>
+              </motion.div>
+            )}
+            {notificationPermission !== 'granted' && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                <Card className="p-6 border-none bg-brand-50 border border-brand-100 rounded-3xl dark:bg-brand-950/30 dark:border-brand-500/20">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 rounded-2xl bg-brand-500 text-white flex items-center justify-center shadow-lg shadow-brand-500/20">
+                        <BellRing size={24} />
+                      </div>
+                      <div className="text-center sm:text-left">
+                        <h3 className="type-card-title text-brand-900 dark:text-brand-100">Aktifkan Notifikasi</h3>
+                        <p className="type-body text-brand-700/70 mt-1 dark:text-brand-200/80 text-xs">
+                          Dapatkan info pengumuman penting secara real-time.
+                        </p>
+                      </div>
+                    </div>
+                    <Button onClick={handleRequestPermission} className="w-full sm:w-auto bg-brand-600 shadow-none">
+                      Aktifkan Sekarang
                     </Button>
                   </div>
                 </Card>
